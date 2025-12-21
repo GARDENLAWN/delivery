@@ -1,0 +1,28 @@
+{
+    "name": "gardenlawn/delivery",
+    "description": "Delivery",
+    "type": "magento2-module",
+    "config": {
+        "sort-packages": true
+    },
+    "version": "1.0.0",
+    "require": {
+        "php": ">=8.3.0",
+        "magento/product-community-edition": "^2.4.8",
+        "hyva-themes/magento2-theme-module": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GardenLawn\\Delivery\\": ""
+        }
+    },
+    "authors": [
+        {
+            "name": "Rafał Piechota",
+            "email": "marcin.piechota@gardenlawn.pl"
+        }
+    ]
+}

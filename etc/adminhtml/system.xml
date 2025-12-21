@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="gardenlawn" translate="label" sortOrder="100">
+            <label>GardenLawn</label>
+        </tab>
+        <section id="delivery" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <class>separator-top</class>
+            <label>Delivery Settings</label>
+            <tab>gardenlawn</tab>
+            <resource>GardenLawn_Delivery::config</resource>
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>General Configuration</label>
+                <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Module Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="google_maps_api_key" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Google Maps API Key</label>
+                    <comment>API Key for Distance Matrix API</comment>
+                </field>
+                <field id="warehouse_origin" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Warehouse Origin Address</label>
+                    <comment>Default starting point for distance calculation (e.g. "Warsaw, Poland")</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

@@ -1,0 +1,40 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+/** @var \GardenLawn\Delivery\ViewModel\DistanceCalculator $viewModel */
+$viewModel = $block->getData('view_model');
+
+if (!$viewModel->isEnabled()) {
+    return;
+}
+
+$destination = $block->getRequest()->getParam('destination');
+$result = $destination ? $viewModel->getDistance($destination) : null;
+?>
+
+<div class="p-6 bg-white shadow-md rounded-lg my-8">
+    <h2 class="text-2xl font-bold mb-4"><?= $block->escapeHtml(__('Distance Calculator')) ?></h2>
+
+    <form action="" method="get" class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium"><?= $block->escapeHtml(__('Destination Address')) ?>:</label>
+            <input type="text" name="destination" value="<?= $block->escapeHtmlAttr($destination) ?>"
+                   class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+        </div>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+            <?= $block->escapeHtml(__('Calculate Distance')) ?>
+        </button>
+    </form>
+
+    <?php if ($result): ?>
+        <div class="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
+            <p class="text-green-800 font-semibold">
+                <?= $block->escapeHtml(__('Distance: %1', $result['distance']['text'])) ?>
+                (<?= $block->escapeHtml(__('Duration: %1', $result['duration']['text'])) ?>)
+            </p>
+        </div>
+    <?php elseif ($destination): ?>
+        <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+            <?= $block->escapeHtml(__('Could not calculate distance. Please check the address.')) ?>
+        </div>
+    <?php endif; ?>
+</div>

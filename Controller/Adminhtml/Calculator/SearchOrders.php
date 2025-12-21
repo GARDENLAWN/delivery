@@ -29,24 +29,21 @@ class SearchOrders extends Action
         $resultJson = $this->resultJsonFactory->create();
         $query = $this->getRequest()->getParam('query');
 
-        if (empty($query) || strlen($query) < 3) {
-            return $resultJson->setData([
-                'success' => false,
-                'message' => __('Please enter at least 3 characters.')
-            ]);
-        }
-
         try {
             $collection = $this->orderCollectionFactory->create();
-            $collection->addAttributeToSelect('*')
-                ->addAttributeToFilter(
+            $collection->addAttributeToSelect('*');
+
+            if (!empty($query) && strlen($query) >= 3) {
+                $collection->addAttributeToFilter(
                     [
                         ['attribute' => 'increment_id', 'like' => '%' . $query . '%'],
                         ['attribute' => 'customer_lastname', 'like' => '%' . $query . '%'],
                         ['attribute' => 'customer_email', 'like' => '%' . $query . '%']
                     ]
-                )
-                ->setPageSize(10)
+                );
+            }
+
+            $collection->setPageSize(10)
                 ->setCurPage(1)
                 ->setOrder('created_at', 'DESC');
 

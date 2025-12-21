@@ -165,10 +165,7 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
             // --- Order Search Logic ---
             function searchOrders() {
                 var query = $('#order-search').val();
-                if (query.length < 3) {
-                    alert('<?= $block->escapeJs(__('Please enter at least 3 characters.')) ?>');
-                    return;
-                }
+                // Removed length check to allow empty query for recent orders
 
                 $('#search-loading').show();
                 $('#orders-grid').hide();
@@ -227,6 +224,9 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                     $('#destination').css('background-color', '');
                 }, 500);
             });
+
+            // Load recent orders on page load
+            searchOrders();
         });
     });
 </script>

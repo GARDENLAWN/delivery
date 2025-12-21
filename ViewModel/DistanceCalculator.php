@@ -46,6 +46,8 @@ class DistanceCalculator implements ArgumentInterface
             return null;
         }
 
+        // Google Maps Distance Matrix API defaults to 'driving'.
+        // There is no specific 'truck' mode in the standard API.
         $url = "https://maps.googleapis.com/maps/api/distancematrix/json?origins="
             . urlencode($origin) . "&destinations=" . urlencode($destination)
             . "&key=" . $apiKey;
@@ -89,8 +91,8 @@ class DistanceCalculator implements ArgumentInterface
                 return null;
             }
 
-            // 3. Calculate Route
-            $url = "https://router.hereapi.com/v8/routes?transportMode=car" .
+            // 3. Calculate Route (using 'truck' mode)
+            $url = "https://router.hereapi.com/v8/routes?transportMode=truck" .
                    "&origin=" . $originCoords['lat'] . "," . $originCoords['lng'] .
                    "&destination=" . $destCoords['lat'] . "," . $destCoords['lng'] .
                    "&return=summary" .

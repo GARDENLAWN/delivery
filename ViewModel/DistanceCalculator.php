@@ -22,10 +22,14 @@ class DistanceCalculator implements ArgumentInterface
         return $this->config->isEnabled();
     }
 
-    public function getDistance(string $destination): ?array
+    public function getDefaultOrigin(): ?string
+    {
+        return $this->config->getWarehouseOrigin();
+    }
+
+    public function getDistance(string $origin, string $destination): ?array
     {
         $apiKey = $this->config->getApiKey();
-        $origin = $this->config->getWarehouseOrigin();
 
         if (!$apiKey || !$origin || !$destination) {
             return null;
@@ -37,10 +41,14 @@ class DistanceCalculator implements ArgumentInterface
 
         try {
             $this->curl->get($url);
-            $result = json_decode($this->curl->getBody(), true);
+            $responseBody = $this->curl->getBody();
+            $result = json_decode($responseBody, true);
 
             if (isset($result['rows'][0]['elements'][0]['distance'])) {
-                return $result['rows'][0]['elements'][0];
+                return [
+                    'element' => $result['rows'][0]['elements'][0],
+                    'raw_json' => $responseBody
+                ];
             }
         } catch (\Exception $e) {
             // Log error if needed

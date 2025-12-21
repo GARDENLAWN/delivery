@@ -12,34 +12,105 @@ if (!$viewModel->isEnabled()) {
     return;
 }
 
-$destination = $block->getRequest()->getParam('destination');
-$result = $destination ? $viewModel->getDistance($destination) : null;
+$defaultOrigin = $viewModel->getDefaultOrigin();
 ?>
 
-<div class="admin__field">
-    <form action="<?= $block->getUrl('*/*/*') ?>" method="get" class="admin__scope-old">
-        <div class="admin__field-label">
-            <label for="destination"><span><?= $block->escapeHtml(__('Destination Address')) ?></span></label>
-        </div>
-        <div class="admin__field-control">
-            <input type="text" name="destination" id="destination" value="<?= $block->escapeHtmlAttr($destination) ?>" class="admin__control-text" style="width: 300px;" required />
-            <button type="submit" class="action-default primary">
-                <span><?= $block->escapeHtml(__('Calculate Distance')) ?></span>
-            </button>
-        </div>
+<div class="entry-edit" id="distance-calculator-container">
+    <form id="distance-calculator-form" method="post">
+        <fieldset class="fieldset">
+            <legend class="legend"><span><?= $block->escapeHtml(__('Distance Calculation')) ?></span></legend><br>
+
+            <div class="field required">
+                <label class="label" for="origin">
+                    <span><?= $block->escapeHtml(__('Origin Address')) ?></span>
+                </label>
+                <div class="control">
+                    <input type="text" name="origin" id="origin" value="<?= $block->escapeHtmlAttr($defaultOrigin) ?>" class="input-text" required />
+                </div>
+            </div>
+
+            <div class="field required">
+                <label class="label" for="destination">
+                    <span><?= $block->escapeHtml(__('Destination Address')) ?></span>
+                </label>
+                <div class="control">
+                    <input type="text" name="destination" id="destination" class="input-text" required />
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="label">&nbsp;</label>
+                <div class="control">
+                    <button type="submit" class="action-primary" id="calculate-btn">
+                        <span><?= $block->escapeHtml(__('Calculate Distance')) ?></span>
+                    </button>
+                </div>
+            </div>
+
+        </fieldset>
     </form>
+
+    <div id="calculator-result" class="message message-success success" style="display: none; margin-top: 20px;">
+        <div>
+            <strong><?= $block->escapeHtml(__('Distance: ')) ?><span id="result-distance"></span></strong>
+            <br/>
+            <?= $block->escapeHtml(__('Duration: ')) ?><span id="result-duration"></span>
+            <br/><br/>
+            <strong><?= $block->escapeHtml(__('API Response:')) ?></strong>
+            <pre id="result-json" style="background: #f5f5f5; padding: 10px; border: 1px solid #ccc; margin-top: 5px; overflow-x: auto;"></pre>
+        </div>
+    </div>
+
+    <div id="calculator-error" class="message message-error error" style="display: none; margin-top: 20px;">
+        <div id="error-message"></div>
+    </div>
 </div>
 
-<?php if ($result): ?>
-    <div class="message message-success success mt-4" style="margin-top: 20px;">
-        <div>
-            <strong><?= $block->escapeHtml(__('Distance: %1', $result['distance']['text'])) ?></strong>
-            <br/>
-            <?= $block->escapeHtml(__('Duration: %1', $result['duration']['text'])) ?>
-        </div>
-    </div>
-<?php elseif ($destination): ?>
-    <div class="message message-error error mt-4" style="margin-top: 20px;">
-        <div><?= $block->escapeHtml(__('Could not calculate distance. Please check the address or API key.')) ?></div>
-    </div>
-<?php endif; ?>
+<script>
+    require(['jquery', 'mage/url'], function($, urlBuilder) {
+        $(document).ready(function() {
+            $('#distance-calculator-form').on('submit', function(e) {
+                e.preventDefault();
+
+                var origin = $('#origin').val();
+                var destination = $('#destination').val();
+                var $btn = $('#calculate-btn');
+                var $result = $('#calculator-result');
+                var $error = $('#calculator-error');
+
+                $btn.prop('disabled', true).text('<?= $block->escapeJs(__('Calculating...')) ?>');
+                $result.hide();
+                $error.hide();
+
+                $.ajax({
+                    url: '<?= $block->getUrl('gardenlawn_delivery/calculator/calculate') ?>',
+                    type: 'POST',
+                    data: {
+                        origin: origin,
+                        destination: destination,
+                        form_key: window.FORM_KEY
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            $('#result-distance').text(response.distance);
+                            $('#result-duration').text(response.duration);
+                            $('#result-json').text(response.raw_json);
+                            $result.show();
+                        } else {
+                            $('#error-message').text(response.message);
+                            $error.show();
+                        }
+                    },
+                    error: function() {
+                        $('#error-message').text('<?= $block->escapeJs(__('An error occurred while processing your request.')) ?>');
+                        $error.show();
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).html('<span><?= $block->escapeJs(__('Calculate Distance')) ?></span>');
+                    }
+                });
+            });
+        });
+    });
+</script>

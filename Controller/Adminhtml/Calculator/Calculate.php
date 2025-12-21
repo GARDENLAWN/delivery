@@ -59,6 +59,8 @@ class Calculate extends Action
                     'success' => true,
                     'distance' => $element['distance']['text'],
                     'duration' => $element['duration']['text'],
+                    'departure_time' => $element['departure_time'],
+                    'arrival_time' => $element['arrival_time'],
                     'raw_json' => $prettyJson
                 ]);
             } else {

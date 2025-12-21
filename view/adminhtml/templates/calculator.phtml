@@ -59,6 +59,10 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                     <strong><?= $block->escapeHtml(__('Distance: ')) ?><span id="result-distance"></span></strong>
                     <br/>
                     <?= $block->escapeHtml(__('Duration: ')) ?><span id="result-duration"></span>
+                    <br/>
+                    <?= $block->escapeHtml(__('Departure: ')) ?><span id="result-departure"></span>
+                    <br/>
+                    <?= $block->escapeHtml(__('Arrival: ')) ?><span id="result-arrival"></span>
                     <br/><br/>
                     <strong><?= $block->escapeHtml(__('API Response:')) ?></strong>
                     <pre id="result-json" style="background: #f5f5f5; padding: 10px; border: 1px solid #ccc; margin-top: 5px; overflow-x: auto; max-height: 300px;"></pre>
@@ -145,6 +149,8 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                         if (response.success) {
                             $('#result-distance').text(response.distance);
                             $('#result-duration').text(response.duration);
+                            $('#result-departure').text(response.departure_time);
+                            $('#result-arrival').text(response.arrival_time);
                             $('#result-json').text(response.raw_json);
                             $result.show();
                         } else {

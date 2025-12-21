@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="GardenLawn_Delivery::calculator"
+             title="Delivery Calculator"
+             module="GardenLawn_Delivery"
+             sortOrder="50"
+             parent="Magento_Sales::sales_operation"
+             action="gardenlawn_delivery/calculator/index"
+             resource="GardenLawn_Delivery::calculator"/>
+    </menu>
+</config>

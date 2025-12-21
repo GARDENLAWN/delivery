@@ -1,0 +1,45 @@
+<?php
+/** @var \Magento\Backend\Block\Template $block */
+/** @var \GardenLawn\Delivery\ViewModel\DistanceCalculator $viewModel */
+$viewModel = $block->getData('view_model');
+
+if (!$viewModel->isEnabled()) {
+    ?>
+    <div class="message message-warning error">
+        <div><?= $block->escapeHtml(__('Please enable the module in Stores > Configuration > GardenLawn > Delivery Settings.')) ?></div>
+    </div>
+    <?php
+    return;
+}
+
+$destination = $block->getRequest()->getParam('destination');
+$result = $destination ? $viewModel->getDistance($destination) : null;
+?>
+
+<div class="admin__field">
+    <form action="<?= $block->getUrl('*/*/*') ?>" method="get" class="admin__scope-old">
+        <div class="admin__field-label">
+            <label for="destination"><span><?= $block->escapeHtml(__('Destination Address')) ?></span></label>
+        </div>
+        <div class="admin__field-control">
+            <input type="text" name="destination" id="destination" value="<?= $block->escapeHtmlAttr($destination) ?>" class="admin__control-text" style="width: 300px;" required />
+            <button type="submit" class="action-default primary">
+                <span><?= $block->escapeHtml(__('Calculate Distance')) ?></span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<?php if ($result): ?>
+    <div class="message message-success success mt-4" style="margin-top: 20px;">
+        <div>
+            <strong><?= $block->escapeHtml(__('Distance: %1', $result['distance']['text'])) ?></strong>
+            <br/>
+            <?= $block->escapeHtml(__('Duration: %1', $result['duration']['text'])) ?>
+        </div>
+    </div>
+<?php elseif ($destination): ?>
+    <div class="message message-error error mt-4" style="margin-top: 20px;">
+        <div><?= $block->escapeHtml(__('Could not calculate distance. Please check the address or API key.')) ?></div>
+    </div>
+<?php endif; ?>

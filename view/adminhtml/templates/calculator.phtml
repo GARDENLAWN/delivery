@@ -71,6 +71,10 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
 
             <div id="calculator-error" class="message message-error error" style="display: none; margin-top: 20px;">
                 <div id="error-message"></div>
+                <div id="error-json-container" style="display: none; margin-top: 10px;">
+                    <strong><?= $block->escapeHtml(__('API Error Details:')) ?></strong>
+                    <pre id="error-json" style="background: #fff0f0; padding: 10px; border: 1px solid #ffcccc; margin-top: 5px; overflow-x: auto; max-height: 300px;"></pre>
+                </div>
             </div>
         </div>
     </div>
@@ -131,10 +135,12 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                 var $btn = $('#calculate-btn');
                 var $result = $('#calculator-result');
                 var $error = $('#calculator-error');
+                var $errorJsonContainer = $('#error-json-container');
 
                 $btn.prop('disabled', true).text('<?= $block->escapeJs(__('Calculating...')) ?>');
                 $result.hide();
                 $error.hide();
+                $errorJsonContainer.hide();
 
                 $.ajax({
                     url: '<?= $block->getUrl('gardenlawn_delivery/calculator/calculate') ?>',
@@ -155,6 +161,10 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                             $result.show();
                         } else {
                             $('#error-message').text(response.message);
+                            if (response.raw_json) {
+                                $('#error-json').text(response.raw_json);
+                                $errorJsonContainer.show();
+                            }
                             $error.show();
                         }
                     },

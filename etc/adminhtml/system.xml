@@ -9,6 +9,7 @@
             <label>Delivery Settings</label>
             <tab>gardenlawn</tab>
             <resource>GardenLawn_Delivery::config</resource>
+
             <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>General Configuration</label>
                 <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
@@ -20,6 +21,7 @@
                     <comment>Default starting point for distance calculation (e.g. "Warsaw, Poland")</comment>
                 </field>
             </group>
+
             <group id="api_provider" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>API Provider</label>
                 <field id="provider" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
@@ -39,6 +41,54 @@
                     <depends>
                         <field id="provider">here</field>
                     </depends>
+                </field>
+            </group>
+
+            <group id="truck_settings" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Truck Parameters (HERE API)</label>
+                <depends>
+                    <field id="api_provider/provider">here</field>
+                </depends>
+
+                <field id="vehicle_height" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Height (meters)</label>
+                    <comment>e.g. 4.0</comment>
+                </field>
+                <field id="vehicle_width" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Width (meters)</label>
+                    <comment>e.g. 2.55</comment>
+                </field>
+                <field id="vehicle_length" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Length (meters)</label>
+                    <comment>e.g. 16.5</comment>
+                </field>
+                <field id="vehicle_weight" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Gross Weight (kg)</label>
+                    <comment>Total weight including cargo, e.g. 40000</comment>
+                </field>
+                <field id="vehicle_axle_weight" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Weight Per Axle (kg)</label>
+                    <comment>e.g. 10000</comment>
+                </field>
+                <field id="vehicle_axle_count" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Axle Count</label>
+                    <comment>e.g. 5</comment>
+                </field>
+                <field id="vehicle_type" translate="label" type="select" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Vehicle Type</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleType</source_model>
+                </field>
+
+                <field id="hazardous_goods" translate="label" type="multiselect" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Hazardous Goods</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\HazardousGoods</source_model>
+                    <can_be_empty>1</can_be_empty>
+                </field>
+
+                <field id="avoid_features" translate="label" type="multiselect" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Avoid Features</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\AvoidFeatures</source_model>
+                    <can_be_empty>1</can_be_empty>
                 </field>
             </group>
         </section>

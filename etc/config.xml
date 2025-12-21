@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <delivery>
+            <general>
+                <enabled>1</enabled>
+            </general>
+            <api_provider>
+                <provider>google</provider>
+            </api_provider>
+            <truck_settings>
+                <vehicle_height>4.0</vehicle_height>
+                <vehicle_width>2.55</vehicle_width>
+                <vehicle_length>16.5</vehicle_length>
+                <vehicle_weight>40000</vehicle_weight>
+                <vehicle_axle_weight>10000</vehicle_axle_weight>
+                <vehicle_axle_count>5</vehicle_axle_count>
+                <vehicle_type>tractor</vehicle_type>
+            </truck_settings>
+        </delivery>
+    </default>
+</config>

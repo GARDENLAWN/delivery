@@ -48,7 +48,23 @@ class Calculate extends Action
         try {
             $result = $this->distanceCalculator->getDistance($origin, $destination);
 
-            if ($result) {
+            if (isset($result['error'])) {
+                $errorMessage = $result['error'];
+                $rawJson = isset($result['raw_json']) ? $result['raw_json'] : null;
+
+                $responseData = [
+                    'success' => false,
+                    'message' => __('API Error: %1', $errorMessage)
+                ];
+
+                if ($rawJson) {
+                    $responseData['raw_json'] = json_encode(json_decode($rawJson), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                }
+
+                return $resultJson->setData($responseData);
+            }
+
+            if ($result && isset($result['element'])) {
                 $element = $result['element'];
                 $rawJson = $result['raw_json'];
 
@@ -66,7 +82,7 @@ class Calculate extends Action
             } else {
                 return $resultJson->setData([
                     'success' => false,
-                    'message' => __('Could not calculate distance. Please check the address or API key.')
+                    'message' => __('Could not calculate distance. Unknown error.')
                 ]);
             }
         } catch (\Exception $e) {

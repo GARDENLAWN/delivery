@@ -15,13 +15,30 @@
                     <label>Module Enabled</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
+                <field id="warehouse_origin" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Warehouse Origin Address</label>
+                    <comment>Default starting point for distance calculation (e.g. "Warsaw, Poland")</comment>
+                </field>
+            </group>
+            <group id="api_provider" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>API Provider</label>
+                <field id="provider" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Provider</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\Provider</source_model>
+                </field>
                 <field id="google_maps_api_key" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Google Maps API Key</label>
                     <comment>API Key for Distance Matrix API</comment>
+                    <depends>
+                        <field id="provider">google</field>
+                    </depends>
                 </field>
-                <field id="warehouse_origin" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Warehouse Origin Address</label>
-                    <comment>Default starting point for distance calculation (e.g. "Warsaw, Poland")</comment>
+                <field id="here_api_key" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>HERE API Key</label>
+                    <comment>API Key for HERE Routing API</comment>
+                    <depends>
+                        <field id="provider">here</field>
+                    </depends>
                 </field>
             </group>
         </section>

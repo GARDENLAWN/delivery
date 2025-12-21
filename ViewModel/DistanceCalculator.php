@@ -29,7 +29,18 @@ class DistanceCalculator implements ArgumentInterface
 
     public function getDistance(string $origin, string $destination): ?array
     {
-        $apiKey = $this->config->getApiKey();
+        $provider = $this->config->getProvider();
+
+        if ($provider === 'here') {
+            return $this->getHereDistance($origin, $destination);
+        }
+
+        return $this->getGoogleDistance($origin, $destination);
+    }
+
+    private function getGoogleDistance(string $origin, string $destination): ?array
+    {
+        $apiKey = $this->config->getGoogleApiKey();
 
         if (!$apiKey || !$origin || !$destination) {
             return null;
@@ -51,7 +62,78 @@ class DistanceCalculator implements ArgumentInterface
                 ];
             }
         } catch (\Exception $e) {
-            // Log error if needed
+            // Log error
+        }
+
+        return null;
+    }
+
+    private function getHereDistance(string $origin, string $destination): ?array
+    {
+        $apiKey = $this->config->getHereApiKey();
+
+        if (!$apiKey || !$origin || !$destination) {
+            return null;
+        }
+
+        try {
+            // 1. Geocode Origin
+            $originCoords = $this->getHereCoordinates($origin, $apiKey);
+            if (!$originCoords) {
+                return null;
+            }
+
+            // 2. Geocode Destination
+            $destCoords = $this->getHereCoordinates($destination, $apiKey);
+            if (!$destCoords) {
+                return null;
+            }
+
+            // 3. Calculate Route
+            $url = "https://router.hereapi.com/v8/routes?transportMode=car" .
+                   "&origin=" . $originCoords['lat'] . "," . $originCoords['lng'] .
+                   "&destination=" . $destCoords['lat'] . "," . $destCoords['lng'] .
+                   "&return=summary" .
+                   "&apiKey=" . $apiKey;
+
+            $this->curl->get($url);
+            $responseBody = $this->curl->getBody();
+            $result = json_decode($responseBody, true);
+
+            if (isset($result['routes'][0]['sections'][0]['summary'])) {
+                $summary = $result['routes'][0]['sections'][0]['summary'];
+
+                // Convert meters to km and seconds to readable format to match Google structure
+                $distanceText = round($summary['length'] / 1000, 1) . ' km';
+                $durationText = round($summary['duration'] / 60) . ' mins';
+
+                return [
+                    'element' => [
+                        'distance' => ['text' => $distanceText, 'value' => $summary['length']],
+                        'duration' => ['text' => $durationText, 'value' => $summary['duration']]
+                    ],
+                    'raw_json' => $responseBody
+                ];
+            }
+
+        } catch (\Exception $e) {
+            // Log error
+        }
+
+        return null;
+    }
+
+    private function getHereCoordinates(string $address, string $apiKey): ?array
+    {
+        $url = "https://geocode.search.hereapi.com/v1/geocode?q=" . urlencode($address) . "&apiKey=" . $apiKey;
+
+        // Create a new Curl instance for nested calls to avoid conflicts
+        $curl = new \Magento\Framework\HTTP\Client\Curl();
+        $curl->get($url);
+        $response = json_decode($curl->getBody(), true);
+
+        if (isset($response['items'][0]['position'])) {
+            return $response['items'][0]['position'];
         }
 
         return null;

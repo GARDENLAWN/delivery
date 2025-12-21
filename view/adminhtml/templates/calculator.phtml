@@ -25,7 +25,7 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                     <span><?= $block->escapeHtml(__('Origin Address')) ?></span>
                 </label>
                 <div class="control">
-                    <input type="text" name="origin" id="origin" value="<?= $block->escapeHtmlAttr($defaultOrigin) ?>" class="input-text" required />
+                    <input type="text" name="origin" id="origin" value="<?= $block->escapeHtmlAttr($defaultOrigin) ?>" class="input-text" style="width: 500px;" required />
                 </div>
             </div>
 
@@ -34,7 +34,7 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                     <span><?= $block->escapeHtml(__('Destination Address')) ?></span>
                 </label>
                 <div class="control">
-                    <input type="text" name="destination" id="destination" class="input-text" required />
+                    <input type="text" name="destination" id="destination" class="input-text" style="width: 500px;" required />
                 </div>
             </div>
 

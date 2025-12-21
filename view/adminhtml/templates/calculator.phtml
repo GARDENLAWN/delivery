@@ -15,60 +15,110 @@ if (!$viewModel->isEnabled()) {
 $defaultOrigin = $viewModel->getDefaultOrigin();
 ?>
 
-<div class="entry-edit" id="distance-calculator-container">
-    <form id="distance-calculator-form" method="post">
-        <fieldset class="fieldset">
-            <legend class="legend"><span><?= $block->escapeHtml(__('Distance Calculation')) ?></span></legend><br>
+<div class="row" style="display: flex; gap: 20px;">
+    <!-- Left Column: Calculator -->
+    <div class="col-m-6" style="flex: 1;">
+        <div class="entry-edit" id="distance-calculator-container">
+            <form id="distance-calculator-form" method="post">
+                <fieldset class="fieldset">
+                    <legend class="legend"><span><?= $block->escapeHtml(__('Distance Calculation')) ?></span></legend><br>
 
-            <div class="field required">
-                <label class="label" for="origin">
-                    <span><?= $block->escapeHtml(__('Origin Address')) ?></span>
-                </label>
-                <div class="control">
-                    <input type="text" name="origin" id="origin" value="<?= $block->escapeHtmlAttr($defaultOrigin) ?>" class="input-text" style="width: 500px;" required />
+                    <div class="field required">
+                        <label class="label" for="origin">
+                            <span><?= $block->escapeHtml(__('Origin Address')) ?></span>
+                        </label>
+                        <div class="control">
+                            <input type="text" name="origin" id="origin" value="<?= $block->escapeHtmlAttr($defaultOrigin) ?>" class="input-text" style="width: 100%;" required />
+                        </div>
+                    </div>
+
+                    <div class="field required">
+                        <label class="label" for="destination">
+                            <span><?= $block->escapeHtml(__('Destination Address')) ?></span>
+                        </label>
+                        <div class="control">
+                            <input type="text" name="destination" id="destination" class="input-text" style="width: 100%;" required />
+                            <p class="note"><?= $block->escapeHtml(__('Type manually or select from the order list on the right.')) ?></p>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="label">&nbsp;</label>
+                        <div class="control">
+                            <button type="submit" class="action-primary" id="calculate-btn">
+                                <span><?= $block->escapeHtml(__('Calculate Distance')) ?></span>
+                            </button>
+                        </div>
+                    </div>
+
+                </fieldset>
+            </form>
+
+            <div id="calculator-result" class="message message-success success" style="display: none; margin-top: 20px;">
+                <div>
+                    <strong><?= $block->escapeHtml(__('Distance: ')) ?><span id="result-distance"></span></strong>
+                    <br/>
+                    <?= $block->escapeHtml(__('Duration: ')) ?><span id="result-duration"></span>
+                    <br/><br/>
+                    <strong><?= $block->escapeHtml(__('API Response:')) ?></strong>
+                    <pre id="result-json" style="background: #f5f5f5; padding: 10px; border: 1px solid #ccc; margin-top: 5px; overflow-x: auto; max-height: 300px;"></pre>
                 </div>
             </div>
 
-            <div class="field required">
-                <label class="label" for="destination">
-                    <span><?= $block->escapeHtml(__('Destination Address')) ?></span>
-                </label>
-                <div class="control">
-                    <input type="text" name="destination" id="destination" class="input-text" style="width: 500px;" required />
-                </div>
+            <div id="calculator-error" class="message message-error error" style="display: none; margin-top: 20px;">
+                <div id="error-message"></div>
             </div>
-
-            <div class="field">
-                <label class="label">&nbsp;</label>
-                <div class="control">
-                    <button type="submit" class="action-primary" id="calculate-btn">
-                        <span><?= $block->escapeHtml(__('Calculate Distance')) ?></span>
-                    </button>
-                </div>
-            </div>
-
-        </fieldset>
-    </form>
-
-    <div id="calculator-result" class="message message-success success" style="display: none; margin-top: 20px;">
-        <div>
-            <strong><?= $block->escapeHtml(__('Distance: ')) ?><span id="result-distance"></span></strong>
-            <br/>
-            <?= $block->escapeHtml(__('Duration: ')) ?><span id="result-duration"></span>
-            <br/><br/>
-            <strong><?= $block->escapeHtml(__('API Response:')) ?></strong>
-            <pre id="result-json" style="background: #f5f5f5; padding: 10px; border: 1px solid #ccc; margin-top: 5px; overflow-x: auto;"></pre>
         </div>
     </div>
 
-    <div id="calculator-error" class="message message-error error" style="display: none; margin-top: 20px;">
-        <div id="error-message"></div>
+    <!-- Right Column: Order Search -->
+    <div class="col-m-6" style="flex: 1;">
+        <div class="entry-edit">
+            <fieldset class="fieldset">
+                <legend class="legend"><span><?= $block->escapeHtml(__('Find Order Address')) ?></span></legend><br>
+
+                <div class="field">
+                    <label class="label" for="order-search">
+                        <span><?= $block->escapeHtml(__('Search Order')) ?></span>
+                    </label>
+                    <div class="control" style="display: flex; gap: 10px;">
+                        <input type="text" id="order-search" class="input-text" placeholder="<?= $block->escapeHtmlAttr(__('Order #, Customer Name or Email')) ?>" style="flex: 1;" />
+                        <button type="button" id="search-btn" class="action-default">
+                            <span><?= $block->escapeHtml(__('Search')) ?></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="search-results-container" style="margin-top: 20px;">
+                    <table class="data-grid" id="orders-grid" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th class="data-grid-th"><?= $block->escapeHtml(__('Order #')) ?></th>
+                                <th class="data-grid-th"><?= $block->escapeHtml(__('Customer')) ?></th>
+                                <th class="data-grid-th"><?= $block->escapeHtml(__('Address')) ?></th>
+                                <th class="data-grid-th"><?= $block->escapeHtml(__('Action')) ?></th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body">
+                            <!-- Results will be injected here -->
+                        </tbody>
+                    </table>
+                    <div id="no-orders-found" class="message message-notice notice" style="display: none;">
+                        <div><?= $block->escapeHtml(__('No orders found.')) ?></div>
+                    </div>
+                    <div id="search-loading" style="display: none; text-align: center; padding: 20px;">
+                        <?= $block->escapeHtml(__('Searching...')) ?>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
     </div>
 </div>
 
 <script>
     require(['jquery', 'mage/url'], function($, urlBuilder) {
         $(document).ready(function() {
+            // --- Calculator Logic ---
             $('#distance-calculator-form').on('submit', function(e) {
                 e.preventDefault();
 
@@ -110,6 +160,72 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                         $btn.prop('disabled', false).html('<span><?= $block->escapeJs(__('Calculate Distance')) ?></span>');
                     }
                 });
+            });
+
+            // --- Order Search Logic ---
+            function searchOrders() {
+                var query = $('#order-search').val();
+                if (query.length < 3) {
+                    alert('<?= $block->escapeJs(__('Please enter at least 3 characters.')) ?>');
+                    return;
+                }
+
+                $('#search-loading').show();
+                $('#orders-grid').hide();
+                $('#no-orders-found').hide();
+                $('#orders-table-body').empty();
+
+                $.ajax({
+                    url: '<?= $block->getUrl('gardenlawn_delivery/calculator/searchOrders') ?>',
+                    type: 'GET',
+                    data: { query: query },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success && response.orders.length > 0) {
+                            $.each(response.orders, function(index, order) {
+                                var row = '<tr>' +
+                                    '<td>' + order.increment_id + '</td>' +
+                                    '<td>' + order.customer_name + '</td>' +
+                                    '<td class="col-address" style="font-size: 0.9em;">' + order.shipping_address + '</td>' +
+                                    '<td><button type="button" class="action-default use-address-btn" data-address="' + order.shipping_address + '"><?= $block->escapeJs(__('Use')) ?></button></td>' +
+                                    '</tr>';
+                                $('#orders-table-body').append(row);
+                            });
+                            $('#orders-grid').show();
+                        } else {
+                            $('#no-orders-found').show();
+                        }
+                    },
+                    error: function() {
+                        alert('<?= $block->escapeJs(__('Error searching orders.')) ?>');
+                    },
+                    complete: function() {
+                        $('#search-loading').hide();
+                    }
+                });
+            }
+
+            $('#search-btn').on('click', function() {
+                searchOrders();
+            });
+
+            $('#order-search').on('keypress', function(e) {
+                if (e.which == 13) { // Enter key
+                    e.preventDefault();
+                    searchOrders();
+                }
+            });
+
+            // Use Address Button Click
+            $(document).on('click', '.use-address-btn', function() {
+                var address = $(this).data('address');
+                $('#destination').val(address);
+
+                // Optional: Highlight the field to show it changed
+                $('#destination').css('background-color', '#e8f0fe');
+                setTimeout(function() {
+                    $('#destination').css('background-color', '');
+                }, 500);
             });
         });
     });

@@ -3,9 +3,9 @@
 namespace GardenLawn\Delivery\Model\Carrier;
 
 use Exception;
+use GardenLawn\Delivery\Service\DistanceService;
 use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Framework\HTTP\Client\Curl;
 use Magento\Quote\Model\Quote\Address\RateRequest;
 use Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory;
 use Magento\Quote\Model\Quote\Address\RateResult\MethodFactory;
@@ -21,7 +21,7 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
     protected ResultFactory $_rateResultFactory;
     protected MethodFactory $_rateMethodFactory;
     protected CheckoutSession $checkoutSession;
-    protected Curl $curl;
+    protected DistanceService $distanceService;
 
     public function __construct(
         ScopeConfigInterface $scopeConfig,
@@ -30,14 +30,14 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
         ResultFactory        $rateResultFactory,
         MethodFactory        $rateMethodFactory,
         CheckoutSession      $checkoutSession,
-        Curl                 $curl,
+        DistanceService      $distanceService,
         array                $data = []
     )
     {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_rateMethodFactory = $rateMethodFactory;
         $this->checkoutSession = $checkoutSession;
-        $this->curl = $curl;
+        $this->distanceService = $distanceService;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
 
@@ -52,62 +52,35 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
 
     public function getDistanceForConfig($address): float
     {
-        $points = [$this->getConfigData('origins'), $address];
-        return $this->getDistanceForPoints($points);
+        $origin = $this->scopeConfig->getValue('delivery/general/warehouse_origin');
+        if (!$origin) {
+            return 0.0;
+        }
+        return $this->distanceService->getDistance($origin, $address);
     }
 
     public function getDistanceForConfigWithPoints($address): float
     {
-        $points = json_decode($this->getConfigData('points'));
-        array_unshift($points->points, $this->getConfigData('origins'));
-        $points->points [] = $address;
-        return $this->getDistanceForPoints($points->points);
-    }
-
-    public function getDistanceForPoints($points): float
-    {
-        $distance = 0;
-
-        for ($i = 0; $i < count($points) - 1; $i++) {
-            $distance += $this->getDistance($points[$i], $points[$i + 1]);
+        $origin = $this->scopeConfig->getValue('delivery/general/warehouse_origin');
+        if (!$origin) {
+            return 0.0;
         }
 
-        return $distance;
-    }
-
-    public function getDistance($origins, $destination): float
-    {
-        $return = 0.00;
-
-        try {
-            $apiUrl = $this->getConfigData('api_url');
-            $apiKey = $this->getConfigData('api_key');
-            $apiParams = $this->getConfigData('api_params');
-
-            if (!$apiUrl || !$apiKey) {
-                $this->_logger->warning('DistanceShipping: Missing API configuration');
-                return $return;
-            }
-
-            $fullApiUrl = $apiUrl . '?key=' . $apiKey . '&' . sprintf(
-                $apiParams ?? 'origins=%s&destinations=%s',
-                urlencode($origins ?? ''),
-                urlencode($destination ?? '')
-            );
-
-            $this->curl->get($fullApiUrl);
-            $response = $this->curl->getBody();
-            $distance = json_decode($response, true);
-
-            if ($distance && isset($distance['rows'][0]['elements'][0]['status'])
-                && $distance['rows'][0]['elements'][0]['status'] === 'OK') {
-                $return = floatval($distance['rows'][0]['elements'][0]['distance']['value'] / 1000.00);
-            }
-        } catch (Exception $e) {
-            $this->_logger->error('DistanceShipping getDistance: ' . $e->getMessage());
+        $pointsJson = $this->getConfigData('points');
+        if (!$pointsJson) {
+            return $this->distanceService->getDistance($origin, $address);
         }
 
-        return $return;
+        $pointsData = json_decode($pointsJson);
+        if (!$pointsData || !isset($pointsData->points)) {
+            return $this->distanceService->getDistance($origin, $address);
+        }
+
+        $points = [$origin];
+        $points = array_merge($points, $pointsData->points);
+        $points[] = $address;
+
+        return $this->distanceService->getDistanceForPoints($points);
     }
 
     /**

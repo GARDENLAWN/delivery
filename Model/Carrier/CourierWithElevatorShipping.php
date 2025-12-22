@@ -2,9 +2,9 @@
 
 namespace GardenLawn\Delivery\Model\Carrier;
 
+use GardenLawn\Delivery\Service\DistanceService;
 use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Framework\HTTP\Client\Curl;
 use Magento\Quote\Model\Quote\Address\RateRequest;
 use Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory;
 use Magento\Quote\Model\Quote\Address\RateResult\MethodFactory;
@@ -20,7 +20,7 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
     protected ResultFactory $_rateResultFactory;
     protected MethodFactory $_rateMethodFactory;
     protected CheckoutSession $checkoutSession;
-    protected Curl $curl;
+    protected DistanceService $distanceService;
 
     public function __construct(
         ScopeConfigInterface $scopeConfig,
@@ -29,14 +29,14 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
         ResultFactory        $rateResultFactory,
         MethodFactory        $rateMethodFactory,
         CheckoutSession      $checkoutSession,
-        Curl                 $curl,
+        DistanceService      $distanceService,
         array                $data = []
     )
     {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_rateMethodFactory = $rateMethodFactory;
         $this->checkoutSession = $checkoutSession;
-        $this->curl = $curl;
+        $this->distanceService = $distanceService;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
 
@@ -78,39 +78,16 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
             return false;
         }
 
-        $apiUrl = $this->getConfigData('api_url');
-        $apiKey = $this->getConfigData('api_key');
-        $apiParams = $this->getConfigData('api_params');
-        $origins = $this->getConfigData('origins');
-
-        if (!$apiUrl || !$apiKey || !$origins) {
-            $this->_logger->warning('CourierWithElevatorShipping: Missing API configuration');
+        $origins = $this->scopeConfig->getValue('delivery/general/warehouse_origin');
+        if (!$origins) {
+            $this->_logger->warning('CourierWithElevatorShipping: Warehouse origin is not configured');
             return false;
         }
 
         $destination = $request->getDestStreet() . ', ' . $request->getDestPostcode() . ' ' . $request->getDestCity();
-        $fullApiUrl = $apiUrl . '?key=' . $apiKey . '&' . sprintf(
-            $apiParams ?? 'origins=%s&destinations=%s',
-            urlencode($origins),
-            urlencode($destination)
-        );
 
         try {
-            $this->curl->get($fullApiUrl);
-            $response = $this->curl->getBody();
-            $distance = json_decode($response, true);
-
-            if (!$distance || !isset($distance['rows'][0]['elements'][0]['status'])) {
-                $this->_logger->error('CourierWithElevatorShipping: Invalid API response');
-                return false;
-            }
-
-            if ($distance['rows'][0]['elements'][0]['status'] !== 'OK') {
-                $this->_logger->warning('CourierWithElevatorShipping: Distance calculation failed - ' . ($distance['rows'][0]['elements'][0]['status'] ?? 'unknown'));
-                return false;
-            }
-
-            $customerKm = $distance['rows'][0]['elements'][0]['distance']['value'] / 1000;
+            $customerKm = $this->distanceService->getDistance($origins, $destination);
 
             if ($customerKm <= 0) {
                 return false;

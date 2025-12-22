@@ -161,7 +161,7 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
             return false;
         }
 
-        $amount = floatval(min($deliverAmounts));
+        $amount = floatval(min($deliverAmounts)) / 1000.0;
 
         if ($amount <= 0) {
             return false;

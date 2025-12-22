@@ -196,13 +196,21 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                     success: function(response) {
                         if (response.success && response.orders.length > 0) {
                             $.each(response.orders, function(index, order) {
-                                var row = '<tr>' +
-                                    '<td>' + order.increment_id + '</td>' +
-                                    '<td>' + order.customer_name + '</td>' +
-                                    '<td class="col-address" style="font-size: 0.9em;">' + order.shipping_address + '</td>' +
-                                    '<td><button type="button" class="action-default use-address-btn" data-address="' + order.shipping_address + '"><?= $block->escapeJs(__('Use')) ?></button></td>' +
-                                    '</tr>';
-                                $('#orders-table-body').append(row);
+                                var $tr = $('<tr>');
+                                $('<td>').text(order.increment_id).appendTo($tr);
+                                $('<td>').text(order.customer_name).appendTo($tr);
+                                $('<td>').addClass('col-address').css('font-size', '0.9em').text(order.shipping_address).appendTo($tr);
+
+                                var $btnTd = $('<td>');
+                                $('<button>', {
+                                    type: 'button',
+                                    'class': 'action-default use-address-btn',
+                                    'data-address': order.shipping_address,
+                                    text: '<?= $block->escapeJs(__('Use')) ?>'
+                                }).appendTo($btnTd);
+                                $btnTd.appendTo($tr);
+
+                                $('#orders-table-body').append($tr);
                             });
                             $('#orders-grid').show();
                         } else {

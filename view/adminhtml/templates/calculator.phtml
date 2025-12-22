@@ -42,6 +42,15 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                         </div>
                     </div>
 
+                    <div class="field required">
+                        <label class="label" for="quantity">
+                            <span><?= $block->escapeHtml(__('Quantity (m²)')) ?></span>
+                        </label>
+                        <div class="control">
+                            <input type="number" name="quantity" id="quantity" class="input-text" style="width: 100%;" required />
+                        </div>
+                    </div>
+
                     <div class="field">
                         <label class="label">&nbsp;</label>
                         <div class="control">
@@ -63,6 +72,12 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                     <?= $block->escapeHtml(__('Departure: ')) ?><span id="result-departure"></span>
                     <br/>
                     <?= $block->escapeHtml(__('Arrival: ')) ?><span id="result-arrival"></span>
+
+                    <div id="result-shipping-costs" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #e3e3e3; display: none;">
+                        <strong><?= $block->escapeHtml(__('Shipping Costs Simulation:')) ?></strong>
+                        <ul id="shipping-costs-list" style="list-style: none; padding: 0; margin-top: 5px;"></ul>
+                    </div>
+
                     <br/><br/>
                     <strong><?= $block->escapeHtml(__('API Response:')) ?></strong>
                     <pre id="result-json" style="background: #f5f5f5; padding: 10px; border: 1px solid #ccc; margin-top: 5px; overflow-x: auto; max-height: 300px;"></pre>
@@ -132,6 +147,7 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
 
                 var origin = $('#origin').val();
                 var destination = $('#destination').val();
+                var quantity = $('#quantity').val();
                 var $btn = $('#calculate-btn');
                 var $result = $('#calculator-result');
                 var $error = $('#calculator-error');
@@ -148,6 +164,7 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                     data: {
                         origin: origin,
                         destination: destination,
+                        quantity: quantity,
                         form_key: window.FORM_KEY
                     },
                     dataType: 'json',
@@ -158,6 +175,18 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                             $('#result-departure').text(response.departure_time);
                             $('#result-arrival').text(response.arrival_time);
                             $('#result-json').text(response.raw_json);
+
+                            if (response.shipping_costs && response.shipping_costs.length > 0) {
+                                var $list = $('#shipping-costs-list');
+                                $list.empty();
+                                $.each(response.shipping_costs, function(i, cost) {
+                                    $('<li>').text(cost.method + ': ' + cost.price).appendTo($list);
+                                });
+                                $('#result-shipping-costs').show();
+                            } else {
+                                $('#result-shipping-costs').hide();
+                            }
+
                             $result.show();
                         } else {
                             $('#error-message').text(response.message);

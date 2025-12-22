@@ -45,45 +45,16 @@ class CourierShipping extends AbstractCarrier implements CarrierInterface
         return [$this->_code => $this->getConfigData('name')];
     }
 
-    /**
-     * @param RateRequest $request
-     * @return bool|Result
-     */
-    public function collectRates(RateRequest $request): Result|bool
+    public function calculatePrice(float $qnt): float
     {
-        if (!$this->getConfigFlag('active')) {
-            return false;
-        }
-
-        $quote = $this->checkoutSession->getQuote();
-        if (!$quote) {
-            return false;
-        }
-
-        $items = $quote->getAllVisibleItems();
-        $targetSku = strtolower($this->getConfigData('target_sku') ?? 'trawa-w-rolce');
-
-        $qnt = 0;
-        foreach ($items as $item) {
-            if (strtolower($item->getSku()) === $targetSku) {
-                $qnt += $item->getQty();
-            }
-        }
-
-        if ($qnt <= 0) {
-            return false;
-        }
-
         $pricesTableJson = $this->getConfigData('prices_table');
         if (!$pricesTableJson) {
-            $this->_logger->warning('CourierShipping: prices_table configuration is missing');
-            return false;
+            return 0.0;
         }
 
         $pricesTable = json_decode($pricesTableJson);
         if (!$pricesTable || !isset($pricesTable->delivers)) {
-            $this->_logger->error('CourierShipping: Invalid prices_table JSON format');
-            return false;
+            return 0.0;
         }
 
         $delivers = $pricesTable->delivers;
@@ -120,10 +91,42 @@ class CourierShipping extends AbstractCarrier implements CarrierInterface
         }
 
         if (empty($deliverAmounts)) {
+            return 0.0;
+        }
+
+        return floatval(min($deliverAmounts));
+    }
+
+    /**
+     * @param RateRequest $request
+     * @return bool|Result
+     */
+    public function collectRates(RateRequest $request): Result|bool
+    {
+        if (!$this->getConfigFlag('active')) {
             return false;
         }
 
-        $amount = floatval(min($deliverAmounts));
+        $quote = $this->checkoutSession->getQuote();
+        if (!$quote) {
+            return false;
+        }
+
+        $items = $quote->getAllVisibleItems();
+        $targetSku = strtolower($this->getConfigData('target_sku') ?? 'trawa-w-rolce');
+
+        $qnt = 0;
+        foreach ($items as $item) {
+            if (strtolower($item->getSku()) === $targetSku) {
+                $qnt += $item->getQty();
+            }
+        }
+
+        if ($qnt <= 0) {
+            return false;
+        }
+
+        $amount = $this->calculatePrice($qnt);
 
         if ($amount <= 0) {
             return false;

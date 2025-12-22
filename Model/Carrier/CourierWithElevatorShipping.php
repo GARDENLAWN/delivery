@@ -49,6 +49,27 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
         return [$this->_code => $this->getConfigData('name')];
     }
 
+    public function calculatePrice(float $distance, float $qnt): float
+    {
+        $pricePerKm = floatval($this->getConfigData('price') ?? 0);
+        $factorMin = floatval($this->getConfigData('factor_min') ?? 1);
+        $factorMax = floatval($this->getConfigData('factor_max') ?? 1.5);
+        $maxLoad = floatval($this->getConfigData('max_load') ?? 100);
+
+        if ($pricePerKm <= 0 || $maxLoad <= 0) {
+            return 0.0;
+        }
+
+        $diffFactor = $factorMax - $factorMin;
+        $maxLoadFactor = $maxLoad / $qnt;
+        $factor = $factorMax - $diffFactor / $maxLoadFactor;
+        $priceKm = $pricePerKm * $factor;
+        $priceCustomerKm = $priceKm * $distance;
+        $price = ceil($priceCustomerKm * $maxLoadFactor);
+
+        return $price > 0 ? $price : 0.0;
+    }
+
     /**
      * @param RateRequest $request
      * @return bool|Result
@@ -93,22 +114,7 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
                 return false;
             }
 
-            $pricePerKm = floatval($this->getConfigData('price') ?? 0);
-            $factorMin = floatval($this->getConfigData('factor_min') ?? 1);
-            $factorMax = floatval($this->getConfigData('factor_max') ?? 1.5);
-            $maxLoad = floatval($this->getConfigData('max_load') ?? 100);
-
-            if ($pricePerKm <= 0 || $maxLoad <= 0) {
-                $this->_logger->warning('CourierWithElevatorShipping: Invalid pricing configuration');
-                return false;
-            }
-
-            $diffFactor = $factorMax - $factorMin;
-            $maxLoadFactor = $maxLoad / $qnt;
-            $factor = $factorMax - $diffFactor / $maxLoadFactor;
-            $priceKm = $pricePerKm * $factor;
-            $priceCustomerKm = $priceKm * $customerKm;
-            $price = ceil($priceCustomerKm * $maxLoadFactor);
+            $price = $this->calculatePrice($customerKm, $qnt);
 
             if ($price <= 0) {
                 return false;

@@ -2,7 +2,6 @@
 
 namespace GardenLawn\Delivery\Model\Carrier;
 
-use Exception;
 use GardenLawn\Delivery\Service\DistanceService;
 use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\App\Config\ScopeConfigInterface;
@@ -83,10 +82,50 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
         return $this->distanceService->getDistanceForPoints($points);
     }
 
-    /**
-     * @param RateRequest $request
-     * @return bool|Result
-     */
+    public function calculatePrice(float $distance, float $qnt): float
+    {
+        $pricesTableJson = $this->getConfigData('prices_table');
+        if (!$pricesTableJson) {
+            return 0.0;
+        }
+
+        $pricesTable = json_decode($pricesTableJson);
+        if (!$pricesTable || !isset($pricesTable->delivers)) {
+            return 0.0;
+        }
+
+        $delivers = $pricesTable->delivers;
+        $deliverAmounts = [];
+        $priceFactor = (100 + floatval($this->getConfigData('price_supplement') ?? 0)) / 100;
+        $baseKm = floatval($this->getConfigData('base_km') ?? 1);
+
+        foreach ($delivers as $deliver) {
+            foreach ($deliver as $item) {
+                if (!isset($item->m2, $item->price)) {
+                    continue;
+                }
+
+                if ($qnt <= $item->m2) {
+                    if (property_exists($item, 'full_price') && isset($item->palette)) {
+                        $deliverAmounts[] = ceil($item->full_price * $item->palette * $priceFactor);
+                    } else {
+                        if ($baseKm > 0 && isset($item->palette)) {
+                            $deliverAmounts[] = ceil($distance * ($item->m2 * $item->price / $item->palette / $baseKm) /
+                                $baseKm * $distance * $item->palette * $priceFactor);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (empty($deliverAmounts)) {
+            return 0.0;
+        }
+
+        return floatval(min($deliverAmounts)) / 1000.0;
+    }
+
     public function collectRates(RateRequest $request): Result|bool
     {
         if (!$this->getConfigFlag('active')) {
@@ -120,48 +159,7 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
             return false;
         }
 
-        $pricesTableJson = $this->getConfigData('prices_table');
-        if (!$pricesTableJson) {
-            $this->_logger->warning('DistanceShipping: prices_table configuration is missing');
-            return false;
-        }
-
-        $pricesTable = json_decode($pricesTableJson);
-        if (!$pricesTable || !isset($pricesTable->delivers)) {
-            $this->_logger->error('DistanceShipping: Invalid prices_table JSON format');
-            return false;
-        }
-
-        $delivers = $pricesTable->delivers;
-        $deliverAmounts = [];
-        $priceFactor = (100 + floatval($this->getConfigData('price_supplement') ?? 0)) / 100;
-        $baseKm = floatval($this->getConfigData('base_km') ?? 1);
-
-        foreach ($delivers as $deliver) {
-            foreach ($deliver as $item) {
-                if (!isset($item->m2, $item->price)) {
-                    continue;
-                }
-
-                if ($qnt <= $item->m2) {
-                    if (property_exists($item, 'full_price') && isset($item->palette)) {
-                        $deliverAmounts[] = ceil($item->full_price * $item->palette * $priceFactor);
-                    } else {
-                        if ($baseKm > 0 && isset($item->palette)) {
-                            $deliverAmounts[] = ceil($distance * ($item->m2 * $item->price / $item->palette / $baseKm) /
-                                $baseKm * $distance * $item->palette * $priceFactor);
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-
-        if (empty($deliverAmounts)) {
-            return false;
-        }
-
-        $amount = floatval(min($deliverAmounts)) / 1000.0;
+        $amount = $this->calculatePrice($distance, $qnt);
 
         if ($amount <= 0) {
             return false;

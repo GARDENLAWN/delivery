@@ -185,21 +185,6 @@
                     <label>Target Product SKU</label>
                     <comment>SKU to calculate shipping for (default: trawa-w-rolce)</comment>
                 </field>
-                <field id="api_url" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>API URL</label>
-                    <comment>Google Distance Matrix API URL</comment>
-                </field>
-                <field id="api_key" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>API Key</label>
-                </field>
-                <field id="api_params" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>API Parameters</label>
-                    <comment>Format string for API parameters (e.g., "origins=%s&amp;destinations=%s")</comment>
-                </field>
-                <field id="origins" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Origin Address</label>
-                    <comment>Starting point for distance calculation</comment>
-                </field>
                 <field id="price" translate="label" type="text" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Price per KM</label>
                 </field>
@@ -236,20 +221,6 @@
                 <field id="target_sku" translate="label" type="text" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Target Product SKU</label>
                     <comment>SKU to calculate shipping for (default: trawa-w-rolce)</comment>
-                </field>
-                <field id="api_url" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>API URL</label>
-                    <comment>Google Distance Matrix API URL</comment>
-                </field>
-                <field id="api_key" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>API Key</label>
-                </field>
-                <field id="api_params" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>API Parameters</label>
-                    <comment>Format string for API parameters</comment>
-                </field>
-                <field id="origins" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Origin Address</label>
                 </field>
                 <field id="points" translate="label" type="textarea" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Intermediate Points (JSON)</label>

@@ -2,10 +2,9 @@
 
 namespace GardenLawn\Delivery\Model\Carrier;
 
-use Magento\Customer\Model\Session;
+use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Framework\App\ObjectManager;
-use Magento\Framework\Message\ManagerInterface;
+use Magento\Framework\HTTP\Client\Curl;
 use Magento\Quote\Model\Quote\Address\RateRequest;
 use Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory;
 use Magento\Quote\Model\Quote\Address\RateResult\MethodFactory;
@@ -15,30 +14,29 @@ use Magento\Shipping\Model\Rate\Result;
 use Magento\Shipping\Model\Rate\ResultFactory;
 use Psr\Log\LoggerInterface;
 
-class CourierWithElevatorShipping extends AbstractCarrier implements
-    CarrierInterface
+class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInterface
 {
-    protected ManagerInterface $messageManager;
     protected $_code = 'courierwithelevatorshipping';
     protected ResultFactory $_rateResultFactory;
     protected MethodFactory $_rateMethodFactory;
-    protected Session $customerSession;
+    protected CheckoutSession $checkoutSession;
+    protected Curl $curl;
 
     public function __construct(
-        ManagerInterface     $messageManager,
         ScopeConfigInterface $scopeConfig,
         ErrorFactory         $rateErrorFactory,
         LoggerInterface      $logger,
         ResultFactory        $rateResultFactory,
         MethodFactory        $rateMethodFactory,
-        Session              $customerSession,
+        CheckoutSession      $checkoutSession,
+        Curl                 $curl,
         array                $data = []
     )
     {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_rateMethodFactory = $rateMethodFactory;
-        $this->messageManager = $messageManager;
-        $this->customerSession = $customerSession;
+        $this->checkoutSession = $checkoutSession;
+        $this->curl = $curl;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
 
@@ -61,64 +59,73 @@ class CourierWithElevatorShipping extends AbstractCarrier implements
             return false;
         }
 
-        $result = $this->_rateResultFactory->create();
+        $quote = $this->checkoutSession->getQuote();
+        if (!$quote) {
+            return false;
+        }
 
-        $method = $this->_rateMethodFactory->create();
-
-        $method->setCarrier($this->_code);
-        $method->setCarrierTitle(__($this->getConfigData('title')));
-
-        $method->setMethod($this->_code);
-        $method->setMethodTitle(__($this->getConfigData('name')));
-
-        $objectManager = ObjectManager::getInstance();
-        $cart = $objectManager->get('\Magento\Checkout\Model\Cart');
-
-        $items = $cart->getQuote()->getAllVisibleItems();
+        $items = $quote->getAllVisibleItems();
+        $targetSku = strtolower($this->getConfigData('target_sku') ?? 'trawa-w-rolce');
 
         $qnt = 0;
         foreach ($items as $item) {
-            if ($item->getSku() == 'trawa-w-rolce') {
+            if (strtolower($item->getSku()) === $targetSku) {
                 $qnt += $item->getQty();
             }
         }
 
-        $curl = curl_init();
-
-        $apiUrl = $this->getConfigData('api_url')
-            . '?key=' . $this->getConfigData('api_key') . '&'
-            . sprintf($this->getConfigData('api_params') ?? '',
-                str_replace(' ', '%20', $this->getConfigData('origins') ?? ''),
-                str_replace(' ', '%20', $request['dest_street'] . ', ' . $request['dest_postcode'] . ' ' . $request['dest_city'])
-            );
-
-        curl_setopt($curl, CURLOPT_URL, $apiUrl);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        $response = curl_exec($curl);
-
-        header('Content-Type: application/json; charset=utf-8');
-
-        $customerKm = 0;
-        $methodCalculatedKm = false;
-
-        if (curl_error($curl)) {
-
-        } else {
-            $distance = json_decode($response, true);
-
-            if ($distance['rows'][0]['elements'][0]['status'] == 'OK') {
-                $customerKm = $distance['rows'][0]['elements'][0]['distance']['value'] / 1000;
-                if ($customerKm > 0) {
-                    $methodCalculatedKm = true;
-                }
-            }
+        if ($qnt <= 0) {
+            return false;
         }
 
-        if ($methodCalculatedKm) {
-            $pricePerKm = $this->getConfigData('price');
-            $factorMin = $this->getConfigData('factorMin');
-            $factorMax = $this->getConfigData('factorMax');
-            $maxLoad = $this->getConfigData('qnty');
+        $apiUrl = $this->getConfigData('api_url');
+        $apiKey = $this->getConfigData('api_key');
+        $apiParams = $this->getConfigData('api_params');
+        $origins = $this->getConfigData('origins');
+
+        if (!$apiUrl || !$apiKey || !$origins) {
+            $this->_logger->warning('CourierWithElevatorShipping: Missing API configuration');
+            return false;
+        }
+
+        $destination = $request->getDestStreet() . ', ' . $request->getDestPostcode() . ' ' . $request->getDestCity();
+        $fullApiUrl = $apiUrl . '?key=' . $apiKey . '&' . sprintf(
+            $apiParams ?? 'origins=%s&destinations=%s',
+            urlencode($origins),
+            urlencode($destination)
+        );
+
+        try {
+            $this->curl->get($fullApiUrl);
+            $response = $this->curl->getBody();
+            $distance = json_decode($response, true);
+
+            if (!$distance || !isset($distance['rows'][0]['elements'][0]['status'])) {
+                $this->_logger->error('CourierWithElevatorShipping: Invalid API response');
+                return false;
+            }
+
+            if ($distance['rows'][0]['elements'][0]['status'] !== 'OK') {
+                $this->_logger->warning('CourierWithElevatorShipping: Distance calculation failed - ' . ($distance['rows'][0]['elements'][0]['status'] ?? 'unknown'));
+                return false;
+            }
+
+            $customerKm = $distance['rows'][0]['elements'][0]['distance']['value'] / 1000;
+
+            if ($customerKm <= 0) {
+                return false;
+            }
+
+            $pricePerKm = floatval($this->getConfigData('price') ?? 0);
+            $factorMin = floatval($this->getConfigData('factor_min') ?? 1);
+            $factorMax = floatval($this->getConfigData('factor_max') ?? 1.5);
+            $maxLoad = floatval($this->getConfigData('max_load') ?? 100);
+
+            if ($pricePerKm <= 0 || $maxLoad <= 0) {
+                $this->_logger->warning('CourierWithElevatorShipping: Invalid pricing configuration');
+                return false;
+            }
+
             $diffFactor = $factorMax - $factorMin;
             $maxLoadFactor = $maxLoad / $qnt;
             $factor = $factorMax - $diffFactor / $maxLoadFactor;
@@ -126,13 +133,26 @@ class CourierWithElevatorShipping extends AbstractCarrier implements
             $priceCustomerKm = $priceKm * $customerKm;
             $price = ceil($priceCustomerKm * $maxLoadFactor);
 
+            if ($price <= 0) {
+                return false;
+            }
+
+            $result = $this->_rateResultFactory->create();
+            $method = $this->_rateMethodFactory->create();
+
+            $method->setCarrier($this->_code);
+            $method->setCarrierTitle(__($this->getConfigData('title')));
+            $method->setMethod($this->_code);
+            $method->setMethodTitle(__($this->getConfigData('name')));
             $method->setPrice($price);
             $method->setCost($price);
 
-            if ($price > 0) {
-                $result->append($method);
-            }
+            $result->append($method);
+
+            return $result;
+        } catch (\Exception $e) {
+            $this->_logger->error('CourierWithElevatorShipping: ' . $e->getMessage());
+            return false;
         }
-        return $result;
     }
 }

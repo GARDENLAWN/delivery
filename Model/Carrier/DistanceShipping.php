@@ -3,9 +3,9 @@
 namespace GardenLawn\Delivery\Model\Carrier;
 
 use Exception;
+use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Framework\App\ObjectManager;
-use Magento\Framework\Message\ManagerInterface;
+use Magento\Framework\HTTP\Client\Curl;
 use Magento\Quote\Model\Quote\Address\RateRequest;
 use Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory;
 use Magento\Quote\Model\Quote\Address\RateResult\MethodFactory;
@@ -17,43 +17,27 @@ use Psr\Log\LoggerInterface;
 
 class DistanceShipping extends AbstractCarrier implements CarrierInterface
 {
-    protected ManagerInterface $messageManager;
-    /**
-     * @var string
-     */
     protected $_code = 'distanceshipping';
-
-    /**
-     * @var ResultFactory
-     */
     protected ResultFactory $_rateResultFactory;
-
-    /**
-     * @var MethodFactory
-     */
     protected MethodFactory $_rateMethodFactory;
+    protected CheckoutSession $checkoutSession;
+    protected Curl $curl;
 
-    /**
-     * @param ScopeConfigInterface $scopeConfig
-     * @param ErrorFactory $rateErrorFactory
-     * @param LoggerInterface $logger
-     * @param ResultFactory $rateResultFactory
-     * @param MethodFactory $rateMethodFactory
-     * @param array $data
-     */
     public function __construct(
-        ManagerInterface     $messageManager,
         ScopeConfigInterface $scopeConfig,
         ErrorFactory         $rateErrorFactory,
         LoggerInterface      $logger,
         ResultFactory        $rateResultFactory,
         MethodFactory        $rateMethodFactory,
+        CheckoutSession      $checkoutSession,
+        Curl                 $curl,
         array                $data = []
     )
     {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_rateMethodFactory = $rateMethodFactory;
-        $this->messageManager = $messageManager;
+        $this->checkoutSession = $checkoutSession;
+        $this->curl = $curl;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
 
@@ -96,38 +80,34 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
         $return = 0.00;
 
         try {
-            $curl = curl_init();
+            $apiUrl = $this->getConfigData('api_url');
+            $apiKey = $this->getConfigData('api_key');
+            $apiParams = $this->getConfigData('api_params');
 
-            $apiUrl = $this->getConfigData('api_url')
-                . '?key=' . $this->getConfigData('api_key') . '&'
-                . sprintf($this->getConfigData('api_params'),
-                    str_replace(' ', '%20', $origins ?? ''),
-                    str_replace(' ', '%20', $destination ?? '')
-                );
+            if (!$apiUrl || !$apiKey) {
+                $this->_logger->warning('DistanceShipping: Missing API configuration');
+                return $return;
+            }
 
-            curl_setopt($curl, CURLOPT_URL, $apiUrl);
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-            $response = curl_exec($curl);
+            $fullApiUrl = $apiUrl . '?key=' . $apiKey . '&' . sprintf(
+                $apiParams ?? 'origins=%s&destinations=%s',
+                urlencode($origins ?? ''),
+                urlencode($destination ?? '')
+            );
 
-            header('Content-Type: application/json; charset=utf-8');
+            $this->curl->get($fullApiUrl);
+            $response = $this->curl->getBody();
+            $distance = json_decode($response, true);
 
-            $curlError = curl_error($curl);
-            if ($curlError) {
-                $this->_logger->error($curlError);
-            } else {
-                $distance = json_decode($response, true);
-
-                if ($distance['rows'] && $distance['rows'][0]['elements'][0]['status'] == 'OK') {
-                    $return = floatval($distance['rows'][0]['elements'][0]['distance']['value'] / 1000.00);
-                }
+            if ($distance && isset($distance['rows'][0]['elements'][0]['status'])
+                && $distance['rows'][0]['elements'][0]['status'] === 'OK') {
+                $return = floatval($distance['rows'][0]['elements'][0]['distance']['value'] / 1000.00);
             }
         } catch (Exception $e) {
-            $this->_logger->error($e);
-        } finally {
-            curl_close($curl);
-            return $return;
+            $this->_logger->error('DistanceShipping getDistance: ' . $e->getMessage());
         }
+
+        return $return;
     }
 
     /**
@@ -140,80 +120,91 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
             return false;
         }
 
-        $result = $this->_rateResultFactory->create();
-        $method = $this->_rateMethodFactory->create();
+        $quote = $this->checkoutSession->getQuote();
+        if (!$quote) {
+            return false;
+        }
 
-        $method->setCarrier($this->_code);
-        $method->setCarrierTitle(__($this->getConfigData('title')));
-
-        $method->setMethod($this->_code);
-        $method->setMethodTitle(__($this->getConfigData('name')));
-
-        $objectManager = ObjectManager::getInstance();
-        $cart = $objectManager->get('\Magento\Checkout\Model\Cart');
-
-        $items = $cart->getQuote()->getAllVisibleItems();
+        $items = $quote->getAllVisibleItems();
+        $targetSku = strtolower($this->getConfigData('target_sku') ?? 'trawa-w-rolce');
 
         $qnt = 0;
         foreach ($items as $item) {
-            if (strtolower($item->getSku()) == 'trawa-w-rolce') {
+            if (strtolower($item->getSku()) === $targetSku) {
                 $qnt += $item->getQty();
             }
         }
 
-        $methodCalculatedPrice = false;
-        $distance = $this->getDistanceForConfigWithPoints(
-            $request['dest_street'] . ', ' . $request['dest_postcode'] . ' ' . $request['dest_city']);
+        if ($qnt <= 0) {
+            return false;
+        }
 
-        $pricesTable = json_decode($this->getConfigData('prices_table'));
+        $destination = $request->getDestStreet() . ', ' . $request->getDestPostcode() . ' ' . $request->getDestCity();
+        $distance = $this->getDistanceForConfigWithPoints($destination);
+
+        if ($distance <= 0) {
+            $this->_logger->warning('DistanceShipping: Could not calculate distance');
+            return false;
+        }
+
+        $pricesTableJson = $this->getConfigData('prices_table');
+        if (!$pricesTableJson) {
+            $this->_logger->warning('DistanceShipping: prices_table configuration is missing');
+            return false;
+        }
+
+        $pricesTable = json_decode($pricesTableJson);
+        if (!$pricesTable || !isset($pricesTable->delivers)) {
+            $this->_logger->error('DistanceShipping: Invalid prices_table JSON format');
+            return false;
+        }
+
         $delivers = $pricesTable->delivers;
-
         $deliverAmounts = [];
+        $priceFactor = (100 + floatval($this->getConfigData('price_supplement') ?? 0)) / 100;
+        $baseKm = floatval($this->getConfigData('base_km') ?? 1);
 
-        foreach ($delivers as $key => $deliver) {
-            foreach ($deliver as $i => $item) {
+        foreach ($delivers as $deliver) {
+            foreach ($deliver as $item) {
+                if (!isset($item->m2, $item->price)) {
+                    continue;
+                }
+
                 if ($qnt <= $item->m2) {
-                    $priceFactor = (100 + floatval($this->getConfigData('price_supplement') ?? 0)) / 100;
-                    if (property_exists($item, 'full_price')) {
-                        $deliverAmounts [] = ceil($item->full_price * $item->palette * $priceFactor);
+                    if (property_exists($item, 'full_price') && isset($item->palette)) {
+                        $deliverAmounts[] = ceil($item->full_price * $item->palette * $priceFactor);
                     } else {
-                        $baseKm = $this->getConfigData('base_km');
-                        $deliverAmounts [] = ceil($distance * ($item->m2 * $item->price / $item->palette / $baseKm) /
-                            $baseKm * $distance * $item->palette * $priceFactor);
+                        if ($baseKm > 0 && isset($item->palette)) {
+                            $deliverAmounts[] = ceil($distance * ($item->m2 * $item->price / $item->palette / $baseKm) /
+                                $baseKm * $distance * $item->palette * $priceFactor);
+                        }
                     }
                     break;
                 }
             }
         }
 
+        if (empty($deliverAmounts)) {
+            return false;
+        }
+
         $amount = floatval(min($deliverAmounts));
 
-        if ($amount > 0) {
-            $methodCalculatedPrice = true;
+        if ($amount <= 0) {
+            return false;
         }
 
-        /*{
-            "destination_addresses" : ["Namysłowska 21, 46-081 Dobrzeń Wielki, Poland"],
-            "origin_addresses" : ["Opole, Poland"],
-            "rows" : [{
-                    "elements" : [{
-                        "distance" : {
-                            "text" : "14.1 km",
-                            "value" : 14065
-                        },
-                        "duration" : { "text" : "21 mins", "value" : 1236 },
-                        "status" : "OK"
-                        }]
-                    }],
-            "status" : "OK"
-        }*/
+        $result = $this->_rateResultFactory->create();
+        $method = $this->_rateMethodFactory->create();
 
-        if ($methodCalculatedPrice) {
-            $method->setPrice($amount);
-            $method->setCost($amount);
-            $method->setDesciption('<div>test</div>');
-            $result->append($method);
-        }
+        $method->setCarrier($this->_code);
+        $method->setCarrierTitle(__($this->getConfigData('title')));
+        $method->setMethod($this->_code);
+        $method->setMethodTitle(__($this->getConfigData('name')));
+        $method->setPrice($amount);
+        $method->setCost($amount);
+
+        $result->append($method);
 
         return $result;
     }

@@ -74,41 +74,54 @@ class CustomFreeShipping extends AbstractCarrier implements CarrierInterface
             return false;
         }
 
-        $result = $this->_rateResultFactory->create();
-
-        $method = $this->_rateMethodFactory->create();
-
-        $method->setCarrier($this->_code);
-        $method->setCarrierTitle(__($this->getConfigData('title')));
-
-        $method->setMethod($this->_code);
-        $method->setMethodTitle(__($this->getConfigData('name')));
+        $allItems = $request->getAllItems();
+        if (!$allItems) {
+            return false;
+        }
 
         $skus = [];
-        foreach ($request['all_items'] as $key => $value) {
-            if (!in_array($value['sku'], $skus)) {
-                $skus[] = $value['sku'];
+        foreach ($allItems as $item) {
+            $sku = $item->getSku();
+            if ($sku && !in_array($sku, $skus, true)) {
+                $skus[] = $sku;
             }
         }
 
-        $freeSkus = explode(";", $this->getConfigData('products_sku') ?? '');
-        array_pop($freeSkus);
-        $isFree = false;
+        if (empty($skus)) {
+            return false;
+        }
+
+        $freeSkusConfig = $this->getConfigData('products_sku');
+        if (!$freeSkusConfig) {
+            $this->_logger->warning('CustomFreeShipping: products_sku configuration is missing');
+            return false;
+        }
+
+        $freeSkus = array_filter(array_map('trim', explode(";", $freeSkusConfig)));
+
+        if (empty($freeSkus)) {
+            return false;
+        }
 
         $diffSkus = array_diff($skus, $freeSkus);
+        $intersection = array_intersect($freeSkus, $skus);
 
-        if (count($diffSkus) == 0 && count(array_intersect($freeSkus, $skus)) > 0) {
-            $isFree = true;
-        }
+        if (count($diffSkus) === 0 && count($intersection) > 0) {
+            $result = $this->_rateResultFactory->create();
+            $method = $this->_rateMethodFactory->create();
 
-        $method->setPrice(0);
-        $method->setCost(0);
+            $method->setCarrier($this->_code);
+            $method->setCarrierTitle(__($this->getConfigData('title')));
+            $method->setMethod($this->_code);
+            $method->setMethodTitle(__($this->getConfigData('name')));
+            $method->setPrice(0);
+            $method->setCost(0);
 
-        if ($isFree) {
             $result->append($method);
+            return $result;
         }
 
-        return $result;
+        return false;
     }
 }
 

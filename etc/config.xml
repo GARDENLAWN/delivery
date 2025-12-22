@@ -18,5 +18,64 @@
                 <vehicle_type>straightTruck</vehicle_type>
             </truck_settings>
         </delivery>
+        <carriers>
+            <customshipping>
+                <active>0</active>
+                <model>GardenLawn\Delivery\Model\Carrier\CustomShipping</model>
+                <title>Custom Shipping</title>
+                <name>Custom Shipping (External Quotes)</name>
+                <sort_order>10</sort_order>
+            </customshipping>
+            <customfreeshipping>
+                <active>0</active>
+                <model>GardenLawn\Delivery\Model\Carrier\CustomFreeShipping</model>
+                <title>Free Shipping</title>
+                <name>Free Shipping for Selected Products</name>
+                <products_sku></products_sku>
+                <sort_order>20</sort_order>
+            </customfreeshipping>
+            <couriershipping>
+                <active>0</active>
+                <model>GardenLawn\Delivery\Model\Carrier\CourierShipping</model>
+                <title>Courier Shipping</title>
+                <name>Courier Delivery</name>
+                <target_sku>trawa-w-rolce</target_sku>
+                <prices_table></prices_table>
+                <price_supplement>0</price_supplement>
+                <sort_order>30</sort_order>
+            </couriershipping>
+            <courierwithelevatorshipping>
+                <active>0</active>
+                <model>GardenLawn\Delivery\Model\Carrier\CourierWithElevatorShipping</model>
+                <title>Courier with Elevator</title>
+                <name>Courier Delivery with Elevator Service</name>
+                <target_sku>trawa-w-rolce</target_sku>
+                <api_url>https://maps.googleapis.com/maps/api/distancematrix/json</api_url>
+                <api_key></api_key>
+                <api_params>origins=%s&amp;destinations=%s</api_params>
+                <origins></origins>
+                <price>0</price>
+                <factor_min>1</factor_min>
+                <factor_max>1.5</factor_max>
+                <max_load>100</max_load>
+                <sort_order>40</sort_order>
+            </courierwithelevatorshipping>
+            <distanceshipping>
+                <active>0</active>
+                <model>GardenLawn\Delivery\Model\Carrier\DistanceShipping</model>
+                <title>Distance-based Shipping</title>
+                <name>Distance-based Delivery</name>
+                <target_sku>trawa-w-rolce</target_sku>
+                <api_url>https://maps.googleapis.com/maps/api/distancematrix/json</api_url>
+                <api_key></api_key>
+                <api_params>origins=%s&amp;destinations=%s</api_params>
+                <origins></origins>
+                <points></points>
+                <prices_table></prices_table>
+                <price_supplement>0</price_supplement>
+                <base_km>1</base_km>
+                <sort_order>50</sort_order>
+            </distanceshipping>
+        </carriers>
     </default>
 </config>

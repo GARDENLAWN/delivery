@@ -5,7 +5,8 @@ namespace GardenLawn\Delivery\Controller\Adminhtml\Calculator;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
-use Magento\Sales\Model\ResourceModel\Order\CollectionFactory;
+use Magento\Sales\Model\ResourceModel\Order\Grid\CollectionFactory;
+use Magento\Sales\Api\OrderRepositoryInterface;
 
 class SearchOrders extends Action
 {
@@ -13,59 +14,69 @@ class SearchOrders extends Action
 
     private JsonFactory $resultJsonFactory;
     private CollectionFactory $orderCollectionFactory;
+    private OrderRepositoryInterface $orderRepository;
 
     public function __construct(
         Context $context,
         JsonFactory $resultJsonFactory,
-        CollectionFactory $orderCollectionFactory
+        CollectionFactory $orderCollectionFactory,
+        OrderRepositoryInterface $orderRepository
     ) {
         parent::__construct($context);
         $this->resultJsonFactory = $resultJsonFactory;
         $this->orderCollectionFactory = $orderCollectionFactory;
+        $this->orderRepository = $orderRepository;
     }
 
     public function execute()
     {
         $resultJson = $this->resultJsonFactory->create();
-        $query = $this->getRequest()->getParam('query');
 
         try {
-            $collection = $this->orderCollectionFactory->create();
-            $collection->addAttributeToSelect('*');
+            $query = $this->getRequest()->getParam('query');
 
-            if (!empty($query) && strlen($query) >= 3) {
-                $collection->addAttributeToFilter(
+            // Create order collection
+            $collection = $this->orderCollectionFactory->create();
+
+            // Apply search filter if query is provided
+            if ($query) {
+                $collection->addFieldToFilter(
+                    ['increment_id', 'billing_name', 'customer_email'],
                     [
-                        ['attribute' => 'increment_id', 'like' => '%' . $query . '%'],
-                        ['attribute' => 'customer_lastname', 'like' => '%' . $query . '%'],
-                        ['attribute' => 'customer_email', 'like' => '%' . $query . '%']
+                        ['like' => '%' . $query . '%'],
+                        ['like' => '%' . $query . '%'],
+                        ['like' => '%' . $query . '%']
                     ]
                 );
             }
 
-            $collection->setPageSize(10)
-                ->setCurPage(1)
-                ->setOrder('created_at', 'DESC');
+            // Order by created_at descending
+            $collection->setOrder('created_at', 'DESC');
+
+            // Limit results
+            $collection->setPageSize(50);
 
             $orders = [];
-            foreach ($collection as $order) {
-                $shippingAddress = $order->getShippingAddress();
 
-                // Skip orders without shipping address (e.g. virtual products)
-                if (!$shippingAddress) {
-                    continue;
+            foreach ($collection as $orderData) {
+                $orderId = $orderData->getEntityId();
+                $order = $this->orderRepository->get($orderId);
+                $shippingAddress = $order->getShippingAddress();
+                $addressString = '';
+
+                if ($shippingAddress) {
+                    $street = $shippingAddress->getStreet();
+                    $addressString = (is_array($street) ? implode(', ', $street) : $street) . ', ' .
+                                     $shippingAddress->getCity() . ', ' .
+                                     $shippingAddress->getPostcode() . ', ' .
+                                     $shippingAddress->getCountryId();
                 }
 
-                $addressString = implode(', ', $shippingAddress->getStreet()) . ', ' .
-                                 $shippingAddress->getCity() . ', ' .
-                                 $shippingAddress->getPostcode() . ', ' .
-                                 $shippingAddress->getCountryId();
-
                 $orders[] = [
-                    'id' => $order->getId(),
-                    'increment_id' => $order->getIncrementId(),
-                    'customer_name' => $order->getCustomerName(),
-                    'created_at' => $order->getCreatedAt(),
+                    'id' => $orderId,
+                    'increment_id' => $orderData->getIncrementId(),
+                    'customer_name' => $orderData->getBillingName(),
+                    'created_at' => $orderData->getCreatedAt(),
                     'shipping_address' => $addressString
                 ];
             }

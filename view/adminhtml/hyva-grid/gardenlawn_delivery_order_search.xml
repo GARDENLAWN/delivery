@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Hyva_Admin:etc/hyva-grid.xsd">
+    <source>
+        <collection>Magento\Sales\Model\ResourceModel\Order\Grid\Collection</collection>
+    </source>
+    <columns>
+        <include>
+            <column name="entity_id"/>
+            <column name="increment_id"/>
+            <column name="created_at"/>
+            <column name="billing_name"/>
+            <column name="customer_email"/>
+        </include>
+    </columns>
+    <navigation>
+        <filters>
+            <filter column="increment_id"/>
+            <filter column="created_at"/>
+            <filter column="billing_name"/>
+            <filter column="customer_email"/>
+        </filters>
+        <sorting>
+            <defaultSortByColumn>created_at</defaultSortByColumn>
+            <defaultSortDirection>desc</defaultSortDirection>
+        </sorting>
+        <pager>
+            <defaultPageSize>10</defaultPageSize>
+            <pageSizes>10,20,50</pageSizes>
+        </pager>
+    </navigation>
+</grid>

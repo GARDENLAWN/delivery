@@ -125,10 +125,16 @@ class DistanceService
             // Merge truck parameters
             $params = array_merge($params, $truckParams);
 
-            $url = self::HERE_API_URL . '?' . http_build_query($params);
+            // Custom query building to handle brackets and commas correctly for HERE API
+            $queryString = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+            $queryString = str_replace(['%2C', '%5B', '%5D'], [',', '[', ']'], $queryString);
 
-            $this->curl->get($url);
-            $response = $this->curl->getBody();
+            $url = self::HERE_API_URL . '?' . $queryString;
+
+            // Use a fresh Curl instance for the route request to ensure clean state
+            $curl = new \Magento\Framework\HTTP\Client\Curl();
+            $curl->get($url);
+            $response = $curl->getBody();
             $data = json_decode($response, true);
 
             if (!$data || !isset($data['routes'][0]['sections'][0]['summary']['length'])) {
@@ -185,60 +191,60 @@ class DistanceService
     {
         $params = [];
 
-        // Vehicle dimensions
+        // Vehicle dimensions - HERE API expects centimeters for dimensions
         $height = $this->scopeConfig->getValue('delivery/truck_settings/vehicle_height');
         if ($height) {
-            $params['vehicle[height]'] = $height;
+            $params['vehicle[height]'] = (int)($height * 100);
         }
 
         $width = $this->scopeConfig->getValue('delivery/truck_settings/vehicle_width');
         if ($width) {
-            $params['vehicle[width]'] = $width;
+            $params['vehicle[width]'] = (int)($width * 100);
         }
 
         $length = $this->scopeConfig->getValue('delivery/truck_settings/vehicle_length');
         if ($length) {
-            $params['vehicle[length]'] = $length;
+            $params['vehicle[length]'] = (int)($length * 100);
         }
 
-        // Vehicle weight
+        // Vehicle weight - HERE API expects kg
         $weight = $this->scopeConfig->getValue('delivery/truck_settings/vehicle_weight');
         if ($weight) {
-            $params['vehicle[grossWeight]'] = $weight;
+            $params['vehicle[grossWeight]'] = (int)$weight;
         }
 
         $axleWeight = $this->scopeConfig->getValue('delivery/truck_settings/vehicle_axle_weight');
         if ($axleWeight) {
-            $params['vehicle[weightPerAxle]'] = $axleWeight;
+            $params['vehicle[weightPerAxle]'] = (int)$axleWeight;
         }
 
         $axleCount = $this->scopeConfig->getValue('delivery/truck_settings/vehicle_axle_count');
         if ($axleCount) {
-            $params['vehicle[axleCount]'] = $axleCount;
+            $params['vehicle[axleCount]'] = (int)$axleCount;
         }
 
         // Vehicle type
+        /*
         $vehicleType = $this->scopeConfig->getValue('delivery/truck_settings/vehicle_type');
         if ($vehicleType) {
             $params['vehicle[type]'] = $vehicleType;
         }
+        */
 
         // Hazardous goods
         $hazardousGoods = $this->scopeConfig->getValue('delivery/truck_settings/hazardous_goods');
         if ($hazardousGoods) {
             $goods = explode(',', $hazardousGoods);
-            foreach ($goods as $index => $good) {
-                $params['vehicle[shippedHazardousGoods][' . $index . ']'] = trim($good);
-            }
+            // HERE API expects comma separated list for shippedHazardousGoods
+            $params['shippedHazardousGoods'] = implode(',', array_map('trim', $goods));
         }
 
         // Avoid features
         $avoidFeatures = $this->scopeConfig->getValue('delivery/truck_settings/avoid_features');
         if ($avoidFeatures) {
             $features = explode(',', $avoidFeatures);
-            foreach ($features as $index => $feature) {
-                $params['avoid[features][' . $index . ']'] = trim($feature);
-            }
+            // HERE API expects comma separated list for avoid[features]
+            $params['avoid[features]'] = implode(',', array_map('trim', $features));
         }
 
         return $params;

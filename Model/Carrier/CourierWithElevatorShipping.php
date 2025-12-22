@@ -78,7 +78,7 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
             return false;
         }
 
-        $origins = $this->scopeConfig->getValue('delivery/general/warehouse_origin');
+        $origins = $this->_scopeConfig->getValue('delivery/general/warehouse_origin');
         if (!$origins) {
             $this->_logger->warning('CourierWithElevatorShipping: Warehouse origin is not configured');
             return false;

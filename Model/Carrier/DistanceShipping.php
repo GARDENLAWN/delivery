@@ -52,7 +52,7 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
 
     public function getDistanceForConfig($address): float
     {
-        $origin = $this->scopeConfig->getValue('delivery/general/warehouse_origin');
+        $origin = $this->_scopeConfig->getValue('delivery/general/warehouse_origin');
         if (!$origin) {
             return 0.0;
         }
@@ -61,7 +61,7 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
 
     public function getDistanceForConfigWithPoints($address): float
     {
-        $origin = $this->scopeConfig->getValue('delivery/general/warehouse_origin');
+        $origin = $this->_scopeConfig->getValue('delivery/general/warehouse_origin');
         if (!$origin) {
             return 0.0;
         }

@@ -171,9 +171,9 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
         $method = $this->_rateMethodFactory->create();
 
         $method->setCarrier($this->_code);
-        $method->setCarrierTitle(__($this->getConfigData('title')));
+        $method->setCarrierTitle((string)__($this->getConfigData('title')));
         $method->setMethod($this->_code);
-        $method->setMethodTitle(__($this->getConfigData('name')));
+        $method->setMethodTitle((string)__($this->getConfigData('name')));
         $method->setPrice($amount);
         $method->setCost($amount);
 

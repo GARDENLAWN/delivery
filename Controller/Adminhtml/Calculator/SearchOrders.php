@@ -50,8 +50,8 @@ class SearchOrders extends Action
                 );
             }
 
-            // Order by created_at descending
-            $collection->setOrder('created_at', 'DESC');
+            // Order by increment_id descending
+            $collection->setOrder('increment_id', 'DESC');
 
             // Limit results
             $collection->setPageSize(50);

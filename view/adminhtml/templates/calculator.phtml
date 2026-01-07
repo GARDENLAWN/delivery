@@ -13,6 +13,26 @@ if (!$viewModel->isEnabled()) {
 }
 
 $defaultOrigin = $viewModel->getDefaultOrigin();
+
+// Przykładowe adresy dla województw
+$exampleAddresses = [
+    'Dolnośląskie' => 'Rynek 1, 50-101 Wrocław',
+    'Kujawsko-pomorskie' => 'Jagiellońska 1, 85-067 Bydgoszcz',
+    'Lubelskie' => 'Krakowskie Przedmieście 1, 20-002 Lublin',
+    'Lubuskie' => 'Bohaterów Westerplatte 1, 65-001 Zielona Góra',
+    'Łódzkie' => 'Piotrkowska 104, 90-004 Łódź',
+    'Małopolskie' => 'Rynek Główny 1, 30-001 Kraków',
+    'Mazowieckie' => 'Marszałkowska 100, 00-001 Warszawa',
+    'Opolskie' => 'Rynek 1, 45-015 Opole',
+    'Podkarpackie' => 'Rynek 1, 35-064 Rzeszów',
+    'Podlaskie' => 'Lipowa 1, 15-001 Białystok',
+    'Pomorskie' => 'Długi Targ 1, 80-828 Gdańsk',
+    'Śląskie' => 'Rynek 1, 40-003 Katowice',
+    'Świętokrzyskie' => 'Sienkiewicza 1, 25-001 Kielce',
+    'Warmińsko-mazurskie' => 'Staromiejska 1, 10-001 Olsztyn',
+    'Wielkopolskie' => 'Stary Rynek 1, 61-772 Poznań',
+    'Zachodniopomorskie' => 'Wały Chrobrego 1, 70-500 Szczecin'
+];
 ?>
 
 <div class="row" style="display: flex; gap: 20px;">
@@ -32,13 +52,29 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                         </div>
                     </div>
 
+                    <div class="field">
+                        <label class="label" for="example-address-select">
+                            <span><?= $block->escapeHtml(__('Example Addresses (Voivodeships)')) ?></span>
+                        </label>
+                        <div class="control">
+                            <select id="example-address-select" class="select admin__control-select" style="width: 100%;">
+                                <option value=""><?= $block->escapeHtml(__('-- Select an example address --')) ?></option>
+                                <?php foreach ($exampleAddresses as $region => $address): ?>
+                                    <option value="<?= $block->escapeHtmlAttr($address) ?>">
+                                        <?= $block->escapeHtml($region . ' - ' . $address) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="field required">
                         <label class="label" for="destination">
                             <span><?= $block->escapeHtml(__('Destination Address')) ?></span>
                         </label>
                         <div class="control">
                             <input type="text" name="destination" id="destination" class="input-text" style="width: 100%;" required />
-                            <p class="note"><?= $block->escapeHtml(__('Type manually or select from the order list on the right.')) ?></p>
+                            <p class="note"><?= $block->escapeHtml(__('Type manually, select from the dropdown above, or select from the order list on the right.')) ?></p>
                         </div>
                     </div>
 
@@ -205,6 +241,20 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                         $btn.prop('disabled', false).html('<span><?= $block->escapeJs(__('Calculate Distance')) ?></span>');
                     }
                 });
+            });
+
+            // --- Example Address Dropdown Logic ---
+            $('#example-address-select').on('change', function() {
+                var address = $(this).val();
+                if (address) {
+                    $('#destination').val(address);
+
+                    // Visual feedback
+                    $('#destination').css('background-color', '#e8f0fe');
+                    setTimeout(function() {
+                        $('#destination').css('background-color', '');
+                    }, 500);
+                }
             });
 
             // --- Order Search Logic ---

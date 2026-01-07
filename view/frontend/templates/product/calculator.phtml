@@ -27,55 +27,101 @@ if ($product) {
 }
 
 // Check if product is eligible (e.g. by SKU or Attribute)
-$targetSku = 'Trawa-w-rolce'; // Or get from config
+$targetSku = 'trawa-w-rolce'; // Or get from config
 // TEMPORARY: Commented out SKU check for debugging
-
+/*
 if ($product && $product->getSku() !== $targetSku) {
     echo '<!-- SKU Mismatch. Expected: ' . $targetSku . ' -->';
     return;
+}
+*/
+
+$productPrice = 0;
+$productId = 0;
+if ($product) {
+    $productPrice = $product->getFinalPrice();
+    $productId = $product->getId();
 }
 
 $defaultOrigin = $viewModel->getDefaultOrigin();
 ?>
 
-<div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md" x-data="productDeliveryCalculator()">
-    <h3 class="text-lg font-semibold mb-2"><?= $block->escapeHtml(__('Estimate Delivery Cost')) ?></h3>
+<div class="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm" x-data="productDeliveryCalculator()">
+    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+        </svg>
+        <?= $block->escapeHtml(__('Estimate Delivery & Total Cost')) ?>
+    </h3>
 
-    <div class="space-y-3">
+    <div class="space-y-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700"><?= $block->escapeHtml(__('Destination Postcode')) ?></label>
-            <div class="flex gap-2 mt-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><?= $block->escapeHtml(__('Destination Postcode')) ?></label>
+            <div class="flex gap-2">
                 <input type="text" x-model="postcode" placeholder="e.g. 00-001"
-                       class="form-input w-full"
+                       class="form-input w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                        @keydown.enter.prevent="calculate"
                 >
-                <button type="button" @click="calculate" class="btn btn-secondary" :disabled="isLoading">
-                    <span x-show="!isLoading"><?= $block->escapeHtml(__('Check')) ?></span>
-                    <span x-show="isLoading"><?= $block->escapeHtml(__('...')) ?></span>
+                <button type="button" @click="calculate" class="btn btn-primary px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50" :disabled="isLoading">
+                    <span x-show="!isLoading"><?= $block->escapeHtml(__('Calculate')) ?></span>
+                    <span x-show="isLoading" class="flex items-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <?= $block->escapeHtml(__('Calculating...')) ?>
+                    </span>
                 </button>
             </div>
-            <p class="text-xs text-gray-500 mt-1"><?= $block->escapeHtml(__('Enter postcode to see delivery options.')) ?></p>
+            <p class="text-xs text-gray-500 mt-1"><?= $block->escapeHtml(__('Enter your postcode to see available delivery methods and total cost.')) ?></p>
         </div>
 
-        <div x-show="error" class="text-red-600 text-sm" x-text="error" style="display: none;"></div>
+        <div x-show="error" class="p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200" x-text="error" style="display: none;"></div>
 
-        <div x-show="shippingCosts.length > 0" style="display: none;">
-            <table class="min-w-full text-sm">
-                <tbody class="divide-y divide-gray-200">
-                    <template x-for="cost in shippingCosts" :key="cost.method">
-                        <tr>
-                            <td class="py-2 text-gray-900" x-text="cost.method"></td>
-                            <td class="py-2 text-right font-medium text-gray-900" x-text="cost.formatted_price"></td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-            <p class="text-xs text-gray-500 mt-2">
-                <?= $block->escapeHtml(__('Distance: ')) ?> <span x-text="distance"></span>
-            </p>
+        <div x-show="shippingCosts.length > 0" style="display: none;" class="animate-fade-in">
+            <div class="bg-gray-50 rounded-md p-4 border border-gray-200 mb-4">
+                <div class="flex justify-between items-center text-sm text-gray-600">
+                    <span><?= $block->escapeHtml(__('Distance:')) ?></span>
+                    <span class="font-medium text-gray-900" x-text="distance"></span>
+                </div>
+            </div>
+
+            <h4 class="text-sm font-semibold text-gray-900 mb-2"><?= $block->escapeHtml(__('Available Delivery Methods')) ?></h4>
+            <div class="space-y-2">
+                <template x-for="(cost, index) in shippingCosts" :key="cost.method">
+                    <label class="flex items-center justify-between p-3 border rounded-md cursor-pointer hover:bg-blue-50 transition-colors"
+                           :class="selectedMethodIndex === index ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 bg-white'">
+                        <div class="flex items-center gap-3">
+                            <input type="radio" name="delivery_method" :value="index" x-model="selectedMethodIndex" class="text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm font-medium text-gray-900" x-text="cost.method"></span>
+                        </div>
+                        <span class="text-sm font-bold text-gray-900" x-text="cost.formatted_price"></span>
+                    </label>
+                </template>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="mt-6 border-t border-gray-200 pt-4">
+                <h4 class="text-md font-bold text-gray-900 mb-3"><?= $block->escapeHtml(__('Estimated Order Summary')) ?></h4>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between text-gray-600">
+                        <span><?= $block->escapeHtml(__('Product Cost')) ?> (<span x-text="qty"></span> m²)</span>
+                        <span class="font-medium text-gray-900" x-text="formatPrice(productTotal)"></span>
+                    </div>
+                    <div class="flex justify-between text-gray-600">
+                        <span><?= $block->escapeHtml(__('Delivery Cost')) ?></span>
+                        <span class="font-medium text-gray-900" x-text="selectedDeliveryCostFormatted"></span>
+                    </div>
+                    <div class="flex justify-between text-lg font-bold text-gray-900 border-t border-gray-200 pt-2 mt-2">
+                        <span><?= $block->escapeHtml(__('Total Estimated Cost')) ?></span>
+                        <span class="text-blue-600" x-text="formatPrice(grandTotal)"></span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div x-show="calculated && shippingCosts.length === 0 && !error" class="text-yellow-600 text-sm" style="display: none;">
+        <div x-show="calculated && shippingCosts.length === 0 && !error" class="p-4 bg-yellow-50 text-yellow-700 text-sm rounded-md border border-yellow-200" style="display: none;">
             <?= $block->escapeHtml(__('No delivery methods available for this quantity and location.')) ?>
         </div>
     </div>
@@ -86,16 +132,27 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
         return {
             postcode: '',
             qty: 1,
+            productPrice: <?= (float)$productPrice ?>,
+            productId: <?= (int)$productId ?>,
             isLoading: false,
             error: null,
             shippingCosts: [],
             distance: '',
+            duration: '',
             calculated: false,
+            selectedMethodIndex: 0,
 
             init() {
-                // Watch for quantity changes on the product page
-                // Hyva usually uses Alpine for qty, we can try to hook into it or listen to input change
-                const qtyInput = document.getElementById('qty');
+                // Listen for Hyva qty update event
+                window.addEventListener('update-qty-' + this.productId, (event) => {
+                    this.qty = parseFloat(event.detail) || 1;
+                    if (this.calculated) {
+                        this.calculate();
+                    }
+                });
+
+                // Fallback: Try to find input by name="qty" if event listener fails
+                const qtyInput = document.querySelector('input[name="qty"]');
                 if (qtyInput) {
                     this.qty = parseFloat(qtyInput.value) || 1;
                     qtyInput.addEventListener('change', (e) => {
@@ -107,22 +164,49 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                 }
             },
 
+            get productTotal() {
+                return this.qty * this.productPrice;
+            },
+
+            get selectedDeliveryCost() {
+                if (this.shippingCosts.length > 0 && this.shippingCosts[this.selectedMethodIndex]) {
+                    return parseFloat(this.shippingCosts[this.selectedMethodIndex].price);
+                }
+                return 0;
+            },
+
+            get selectedDeliveryCostFormatted() {
+                if (this.shippingCosts.length > 0 && this.shippingCosts[this.selectedMethodIndex]) {
+                    return this.shippingCosts[this.selectedMethodIndex].formatted_price;
+                }
+                return '-';
+            },
+
+            get grandTotal() {
+                return this.productTotal + this.selectedDeliveryCost;
+            },
+
+            formatPrice(price) {
+                return hyva.formatPrice(price);
+            },
+
             calculate() {
                 if (!this.postcode || this.postcode.length < 3) {
                     this.error = '<?= $block->escapeJs(__('Please enter a valid postcode.')) ?>';
                     return;
                 }
 
-                // Update qty from input just in case
-                const qtyInput = document.getElementById('qty');
+                // Update qty from input just in case (fallback)
+                const qtyInput = document.querySelector('input[name="qty"]');
                 if (qtyInput) {
-                    this.qty = parseFloat(qtyInput.value) || 1;
+                    this.qty = parseFloat(qtyInput.value) || this.qty;
                 }
 
                 this.isLoading = true;
                 this.error = null;
                 this.shippingCosts = [];
                 this.calculated = false;
+                this.selectedMethodIndex = 0;
 
                 fetch('<?= $block->getUrl('delivery/calculator/calculate') ?>', {
                     method: 'POST',
@@ -139,6 +223,7 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                 .then(data => {
                     if (data.success) {
                         this.distance = data.distance;
+                        this.duration = data.duration;
                         this.shippingCosts = data.shipping_costs;
                         this.calculated = true;
                     } else {

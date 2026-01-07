@@ -47,54 +47,40 @@ class CourierShipping extends AbstractCarrier implements CarrierInterface
 
     public function calculatePrice(float $qnt): float
     {
+        // Default values if not configured
+        $m2PerPalette = 35.0;
+        $pricePerPalette = 327.0;
+
+        // Try to get from config
         $pricesTableJson = $this->getConfigData('prices_table');
-        if (!$pricesTableJson) {
+        if ($pricesTableJson) {
+            $pricesTable = json_decode($pricesTableJson);
+            if ($pricesTable && isset($pricesTable->delivers)) {
+                // Assuming the first entry in the first deliver array defines the base unit
+                // Example JSON: {"delivers": {"courier": [{"m2": 35, "price": 327}]}}
+                foreach ($pricesTable->delivers as $deliver) {
+                    if (is_array($deliver) && !empty($deliver)) {
+                        $firstItem = $deliver[0];
+                        if (isset($firstItem->m2, $firstItem->price)) {
+                            $m2PerPalette = floatval($firstItem->m2);
+                            $pricePerPalette = floatval($firstItem->price);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($m2PerPalette <= 0) {
             return 0.0;
         }
 
-        $pricesTable = json_decode($pricesTableJson);
-        if (!$pricesTable || !isset($pricesTable->delivers)) {
-            return 0.0;
-        }
+        $palettes = ceil($qnt / $m2PerPalette);
+        $basePrice = $palettes * $pricePerPalette;
 
-        $delivers = $pricesTable->delivers;
-        $deliverAmounts = [];
         $priceFactor = (100 + floatval($this->getConfigData('price_supplement') ?? 0)) / 100;
 
-        foreach ($delivers as $deliver) {
-            $deliverAmount = 0.0;
-            $remainingQnt = $qnt;
-
-            while ($remainingQnt > 0) {
-                $calc = [];
-                foreach ($deliver as $item) {
-                    if (!isset($item->m2, $item->price)) {
-                        continue;
-                    }
-                    $tmpQty = $remainingQnt < $item->m2 ? ceil($remainingQnt / $item->m2) : floor($remainingQnt / $item->m2);
-                    $calc[] = ['m2' => $item->m2, 'qnt' => $tmpQty, 'price' => $tmpQty * $item->price];
-                }
-
-                if (empty($calc)) {
-                    break;
-                }
-
-                $calcMin = array_reduce($calc, function ($a, $b) {
-                    return $a['price'] < $b['price'] ? $a : $b;
-                }, array_shift($calc));
-
-                $remainingQnt -= floor($calcMin['qnt']) * $calcMin['m2'];
-                $deliverAmount += $calcMin['price'];
-            }
-
-            $deliverAmounts[] = ceil($deliverAmount * $priceFactor);
-        }
-
-        if (empty($deliverAmounts)) {
-            return 0.0;
-        }
-
-        return floatval(min($deliverAmounts));
+        return ceil($basePrice * $priceFactor);
     }
 
     /**

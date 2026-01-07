@@ -43,14 +43,11 @@
                 <target_sku>trawa-w-rolce</target_sku>
                 <prices_table>
                     {
-                    "delivers": {
-                    "courier": [
-                    {"palette":1.0, "m2":10.0, "price":270.0},
-                    {"palette":2.0, "m2":20.0, "price":280.0},
-                    {"palette":3.0, "m2":30.0, "price":290.0},
-                    {"palette":4.0, "m2":50.0, "price":300.0}
-                    ]
-                    }
+                        "delivers": {
+                            "courier": [
+                                {"m2": 35.0, "price": 327.0}
+                            ]
+                        }
                     }
                 </prices_table>
                 <price_supplement>0</price_supplement>

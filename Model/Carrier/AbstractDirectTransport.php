@@ -44,6 +44,19 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
     }
 
     /**
+     * Get origin address for this specific method.
+     * Falls back to general warehouse origin if specific origin is not set.
+     */
+    public function getOrigin(): string
+    {
+        $specificOrigin = $this->getConfigData('specific_origin');
+        if ($specificOrigin) {
+            return $specificOrigin;
+        }
+        return (string)$this->_scopeConfig->getValue('delivery/general/warehouse_origin');
+    }
+
+    /**
      * Calculate price for given distance and quantity
      * Returns 0.0 if method is not applicable (e.g. max qty exceeded)
      */
@@ -94,7 +107,7 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
         }
 
         // 3. Calculate Distance
-        $origin = $this->_scopeConfig->getValue('delivery/general/warehouse_origin');
+        $origin = $this->getOrigin();
         if (!$origin) {
             return false;
         }

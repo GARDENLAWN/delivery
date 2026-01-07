@@ -19,6 +19,9 @@ class DistanceCalculator implements ArgumentInterface
     private DirectLift $directLift;
     private DirectForklift $directForklift;
 
+    // Cache for distances within request to avoid duplicate API calls
+    private array $distanceCache = [];
+
     public function __construct(
         Config $config,
         Curl $curl,
@@ -47,20 +50,26 @@ class DistanceCalculator implements ArgumentInterface
 
     public function getDistance(string $origin, string $destination): ?array
     {
-        $provider = $this->config->getProvider();
-
-        if ($provider === 'here') {
-            return $this->getHereDistance($origin, $destination);
+        $cacheKey = md5($origin . '|' . $destination);
+        if (isset($this->distanceCache[$cacheKey])) {
+            return $this->distanceCache[$cacheKey];
         }
 
-        return $this->getGoogleDistance($origin, $destination);
+        $provider = $this->config->getProvider();
+        $result = ($provider === 'here')
+            ? $this->getHereDistance($origin, $destination)
+            : $this->getGoogleDistance($origin, $destination);
+
+        $this->distanceCache[$cacheKey] = $result;
+        return $result;
     }
 
-    public function calculateShippingCosts(float $distanceKm, float $qty): array
+    public function calculateShippingCosts(float $defaultDistanceKm, float $qty, string $destination): array
     {
         $costs = [];
+        $defaultOrigin = $this->getDefaultOrigin();
 
-        // 1. Courier Shipping (Pallet)
+        // 1. Courier Shipping (Pallet) - Distance independent (usually)
         if ($this->courierShipping->getConfigFlag('active')) {
             $price = $this->courierShipping->calculatePrice($qty);
             if ($price > 0) {
@@ -71,38 +80,48 @@ class DistanceCalculator implements ArgumentInterface
             }
         }
 
-        // 2. Direct No Lift
-        if ($this->directNoLift->getConfigFlag('active')) {
-            $price = $this->directNoLift->calculatePrice($distanceKm, $qty);
+        // Helper function to process Direct methods
+        $processDirectMethod = function ($method) use ($qty, $destination, $defaultOrigin, $defaultDistanceKm) {
+            if (!$method->getConfigFlag('active')) {
+                return null;
+            }
+
+            $methodOrigin = $method->getOrigin();
+            $distanceKm = $defaultDistanceKm;
+
+            // If method has a specific origin different from default, recalculate distance
+            if ($methodOrigin && $methodOrigin !== $defaultOrigin) {
+                $result = $this->getDistance($methodOrigin, $destination);
+                if (isset($result['element']['distance']['value'])) {
+                    $distanceKm = $result['element']['distance']['value'] / 1000;
+                } else {
+                    // If distance calculation fails for specific origin, skip this method
+                    return null;
+                }
+            }
+
+            $price = $method->calculatePrice($distanceKm, $qty);
             if ($price > 0) {
-                $costs[] = [
-                    'method' => $this->directNoLift->getConfigData('name'),
-                    'price' => $price
+                return [
+                    'method' => $method->getConfigData('name'),
+                    'price' => $price,
+                    'distance' => $distanceKm // Optional: return specific distance for debug/info
                 ];
             }
-        }
+            return null;
+        };
+
+        // 2. Direct No Lift
+        $cost = $processDirectMethod($this->directNoLift);
+        if ($cost) $costs[] = $cost;
 
         // 3. Direct Lift
-        if ($this->directLift->getConfigFlag('active')) {
-            $price = $this->directLift->calculatePrice($distanceKm, $qty);
-            if ($price > 0) {
-                $costs[] = [
-                    'method' => $this->directLift->getConfigData('name'),
-                    'price' => $price
-                ];
-            }
-        }
+        $cost = $processDirectMethod($this->directLift);
+        if ($cost) $costs[] = $cost;
 
         // 4. Direct Forklift
-        if ($this->directForklift->getConfigFlag('active')) {
-            $price = $this->directForklift->calculatePrice($distanceKm, $qty);
-            if ($price > 0) {
-                $costs[] = [
-                    'method' => $this->directForklift->getConfigData('name'),
-                    'price' => $price
-                ];
-            }
-        }
+        $cost = $processDirectMethod($this->directForklift);
+        if ($cost) $costs[] = $cost;
 
         return $costs;
     }
@@ -120,8 +139,10 @@ class DistanceCalculator implements ArgumentInterface
             . "&key=" . $apiKey;
 
         try {
-            $this->curl->get($url);
-            $responseBody = $this->curl->getBody();
+            // Use a new Curl instance to avoid state issues
+            $curl = new \Magento\Framework\HTTP\Client\Curl();
+            $curl->get($url);
+            $responseBody = $curl->getBody();
             $result = json_decode($responseBody, true);
 
             if (isset($result['rows'][0]['elements'][0]['distance'])) {

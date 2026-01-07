@@ -15,7 +15,8 @@ $shippingCosts = [];
 
 if ($result && !isset($result['error']) && $qty > 0) {
     $distanceKm = $result['element']['distance']['value'] / 1000;
-    $shippingCosts = $viewModel->calculateShippingCosts($distanceKm, $qty);
+    // Pass destination to allow recalculation for specific origins
+    $shippingCosts = $viewModel->calculateShippingCosts($distanceKm, $qty, $destination);
 }
 ?>
 
@@ -49,7 +50,7 @@ if ($result && !isset($result['error']) && $qty > 0) {
             </div>
         <?php else: ?>
             <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
-                <h3 class="text-lg font-semibold mb-2"><?= $block->escapeHtml(__('Route Details')) ?></h3>
+                <h3 class="text-lg font-semibold mb-2"><?= $block->escapeHtml(__('Route Details (from Main Warehouse)')) ?></h3>
                 <p class="text-gray-700">
                     <strong><?= $block->escapeHtml(__('Distance:')) ?></strong> <?= $block->escapeHtml($result['element']['distance']['text']) ?>
                 </p>
@@ -78,6 +79,11 @@ if ($result && !isset($result['error']) && $qty > 0) {
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         <?= $block->escapeHtml($cost['method']) ?>
+                                        <?php if (isset($cost['distance']) && abs($cost['distance'] - $distanceKm) > 0.1): ?>
+                                            <span class="text-xs text-gray-500 block">
+                                                (<?= $block->escapeHtml(__('Distance: %1 km', round($cost['distance'], 1))) ?>)
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <?= /* @noEscape */ $block->formatPrice($cost['price']) ?>

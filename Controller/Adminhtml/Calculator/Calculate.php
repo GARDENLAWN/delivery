@@ -6,10 +6,6 @@ use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
 use GardenLawn\Delivery\ViewModel\DistanceCalculator;
-use GardenLawn\Delivery\Model\Carrier\CourierShipping;
-use GardenLawn\Delivery\Model\Carrier\DirectNoLift;
-use GardenLawn\Delivery\Model\Carrier\DirectLift;
-use GardenLawn\Delivery\Model\Carrier\DirectForklift;
 
 class Calculate extends Action
 {
@@ -17,27 +13,15 @@ class Calculate extends Action
 
     private JsonFactory $resultJsonFactory;
     private DistanceCalculator $distanceCalculator;
-    private CourierShipping $courierShipping;
-    private DirectNoLift $directNoLift;
-    private DirectLift $directLift;
-    private DirectForklift $directForklift;
 
     public function __construct(
         Context $context,
         JsonFactory $resultJsonFactory,
-        DistanceCalculator $distanceCalculator,
-        CourierShipping $courierShipping,
-        DirectNoLift $directNoLift,
-        DirectLift $directLift,
-        DirectForklift $directForklift
+        DistanceCalculator $distanceCalculator
     ) {
         parent::__construct($context);
         $this->resultJsonFactory = $resultJsonFactory;
         $this->distanceCalculator = $distanceCalculator;
-        $this->courierShipping = $courierShipping;
-        $this->directNoLift = $directNoLift;
-        $this->directLift = $directLift;
-        $this->directForklift = $directForklift;
     }
 
     public function execute()
@@ -63,6 +47,7 @@ class Calculate extends Action
         }
 
         try {
+            // Calculate distance from default origin (for display purposes)
             $result = $this->distanceCalculator->getDistance($origin, $destination);
 
             if (isset($result['error'])) {
@@ -86,67 +71,40 @@ class Calculate extends Action
                 $rawJson = $result['raw_json'];
 
                 // Extract distance value in km
-                $distanceValue = $element['distance']['value']; // meters
+                $distanceValue = $element['element']['distance']['value'] ?? $element['distance']['value']; // Handle potential structure diffs
                 $distanceKm = $distanceValue / 1000;
 
-                // Calculate shipping costs
+                // Calculate shipping costs using ViewModel logic (handles specific origins)
                 $shippingCosts = [];
-
                 if ($quantity > 0) {
-                    // 1. Courier Shipping (Pallet)
-                    if ($this->courierShipping->getConfigFlag('active')) {
-                        $price = $this->courierShipping->calculatePrice($quantity);
-                        if ($price > 0) {
-                            $shippingCosts[] = [
-                                'method' => $this->courierShipping->getConfigData('name'),
-                                'price' => $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($price, true, false)
-                            ];
-                        }
-                    }
+                    $rawCosts = $this->distanceCalculator->calculateShippingCosts($distanceKm, $quantity, $destination);
 
-                    // 2. Direct No Lift
-                    if ($this->directNoLift->getConfigFlag('active')) {
-                        $price = $this->directNoLift->calculatePrice($distanceKm, $quantity);
-                        if ($price > 0) {
-                            $shippingCosts[] = [
-                                'method' => $this->directNoLift->getConfigData('name'),
-                                'price' => $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($price, true, false)
-                            ];
-                        }
-                    }
-
-                    // 3. Direct Lift
-                    if ($this->directLift->getConfigFlag('active')) {
-                        $price = $this->directLift->calculatePrice($distanceKm, $quantity);
-                        if ($price > 0) {
-                            $shippingCosts[] = [
-                                'method' => $this->directLift->getConfigData('name'),
-                                'price' => $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($price, true, false)
-                            ];
-                        }
-                    }
-
-                    // 4. Direct Forklift
-                    if ($this->directForklift->getConfigFlag('active')) {
-                        $price = $this->directForklift->calculatePrice($distanceKm, $quantity);
-                        if ($price > 0) {
-                            $shippingCosts[] = [
-                                'method' => $this->directForklift->getConfigData('name'),
-                                'price' => $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($price, true, false)
-                            ];
-                        }
+                    // Format prices for admin display
+                    foreach ($rawCosts as $cost) {
+                        $formattedPrice = $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($cost['price'], true, false);
+                        $shippingCosts[] = [
+                            'method' => $cost['method'],
+                            'price' => $formattedPrice,
+                            'distance' => isset($cost['distance']) ? round($cost['distance'], 1) . ' km' : null
+                        ];
                     }
                 }
 
                 // Pretty print the JSON
                 $prettyJson = json_encode(json_decode($rawJson), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
+                // Handle structure differences if any (Google vs HERE response structure in ViewModel might vary slightly)
+                $distText = $element['distance']['text'] ?? $element['element']['distance']['text'] ?? '';
+                $durText = $element['duration']['text'] ?? $element['element']['duration']['text'] ?? '';
+                $depTime = $element['departure_time'] ?? '';
+                $arrTime = $element['arrival_time'] ?? '';
+
                 return $resultJson->setData([
                     'success' => true,
-                    'distance' => $element['distance']['text'],
-                    'duration' => $element['duration']['text'],
-                    'departure_time' => $element['departure_time'],
-                    'arrival_time' => $element['arrival_time'],
+                    'distance' => $distText,
+                    'duration' => $durText,
+                    'departure_time' => $depTime,
+                    'arrival_time' => $arrTime,
                     'raw_json' => $prettyJson,
                     'shipping_costs' => $shippingCosts
                 ]);

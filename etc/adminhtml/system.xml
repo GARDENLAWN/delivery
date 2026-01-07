@@ -258,6 +258,10 @@
                 <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
                 </field>
+                <field id="specific_origin" translate="label" type="text" sortOrder="45" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Specific Origin Address</label>
+                    <comment>Leave empty to use default Warehouse Origin. Default: ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska</comment>
+                </field>
                 <field id="max_qty" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Max Quantity (m2)</label>
                     <comment>Hide method if quantity exceeds this value</comment>
@@ -287,6 +291,10 @@
                 <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
                 </field>
+                <field id="specific_origin" translate="label" type="text" sortOrder="45" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Specific Origin Address</label>
+                    <comment>Leave empty to use default Warehouse Origin. Default: ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska</comment>
+                </field>
                 <field id="max_qty" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Max Quantity (m2)</label>
                     <comment>Hide method if quantity exceeds this value</comment>
@@ -315,6 +323,10 @@
                 </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
+                </field>
+                <field id="specific_origin" translate="label" type="text" sortOrder="45" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Specific Origin Address</label>
+                    <comment>Leave empty to use default Warehouse Origin. Default: ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska</comment>
                 </field>
                 <field id="max_qty" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Max Quantity (m2)</label>

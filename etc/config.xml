@@ -117,6 +117,7 @@
                 <title>Direct Transport (No Lift)</title>
                 <name>Direct Transport without Lift</name>
                 <target_sku>trawa-w-rolce</target_sku>
+                <specific_origin>ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska</specific_origin>
                 <max_qty>950</max_qty>
                 <pricing_config>
                     {
@@ -138,6 +139,7 @@
                 <title>Direct Transport (With Lift)</title>
                 <name>Direct Transport with Lift</name>
                 <target_sku>trawa-w-rolce</target_sku>
+                <specific_origin>ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska</specific_origin>
                 <max_qty>350</max_qty>
                 <pricing_config>
                     {
@@ -159,6 +161,7 @@
                 <title>Direct Transport (With Forklift)</title>
                 <name>Direct Transport with Forklift</name>
                 <target_sku>trawa-w-rolce</target_sku>
+                <specific_origin>ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska</specific_origin>
                 <max_qty>800</max_qty>
                 <pricing_config>
                     {

@@ -110,8 +110,7 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
                         $deliverAmounts[] = ceil($item->full_price * $item->palette * $priceFactor);
                     } else {
                         if ($baseKm > 0 && isset($item->palette)) {
-                            $deliverAmounts[] = ceil($distance * ($item->m2 * $item->price / $item->palette / $baseKm) /
-                                $baseKm * $distance * $item->palette * $priceFactor);
+                            $deliverAmounts[] = ceil($distance * ($item->m2 * $item->price / $item->palette / $baseKm) * $item->palette * $priceFactor);
                         }
                     }
                     break;

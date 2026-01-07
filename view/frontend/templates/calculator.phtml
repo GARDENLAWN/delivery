@@ -98,7 +98,7 @@ if ($result && !isset($result['error']) && $qty > 0) {
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <?= /* @noEscape */ $block->formatPrice($cost['price']) ?>
+                                        <?= /* @noEscape */ $this->helper('Magento\Framework\Pricing\Helper\Data')->currency($cost['price'], true, false) ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

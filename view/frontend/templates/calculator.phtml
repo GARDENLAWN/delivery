@@ -51,12 +51,24 @@ if ($result && !isset($result['error']) && $qty > 0) {
         <?php else: ?>
             <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
                 <h3 class="text-lg font-semibold mb-2"><?= $block->escapeHtml(__('Route Details (from Main Warehouse)')) ?></h3>
-                <p class="text-gray-700">
-                    <strong><?= $block->escapeHtml(__('Distance:')) ?></strong> <?= $block->escapeHtml($result['element']['distance']['text']) ?>
-                </p>
-                <p class="text-gray-700">
-                    <strong><?= $block->escapeHtml(__('Estimated Duration:')) ?></strong> <?= $block->escapeHtml($result['element']['duration']['text']) ?>
-                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-700">
+                            <strong><?= $block->escapeHtml(__('Distance:')) ?></strong> <?= $block->escapeHtml($result['element']['distance']['text']) ?>
+                        </p>
+                        <p class="text-gray-700">
+                            <strong><?= $block->escapeHtml(__('Estimated Duration:')) ?></strong> <?= $block->escapeHtml($result['element']['duration']['text']) ?>
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-gray-700">
+                            <strong><?= $block->escapeHtml(__('Departure:')) ?></strong> <?= $block->escapeHtml($result['element']['departure_time']) ?>
+                        </p>
+                        <p class="text-gray-700">
+                            <strong><?= $block->escapeHtml(__('Arrival:')) ?></strong> <?= $block->escapeHtml($result['element']['arrival_time']) ?>
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <?php if (!empty($shippingCosts)): ?>

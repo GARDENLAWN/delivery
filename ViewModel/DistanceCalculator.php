@@ -45,7 +45,7 @@ class DistanceCalculator implements ArgumentInterface
 
     public function getDefaultOrigin(): ?string
     {
-        return $this->config->getWarehouseOrigin();
+        return "ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska" ?? $this->config->getWarehouseOrigin();
     }
 
     public function getDistance(string $origin, string $destination): ?array
@@ -157,8 +157,8 @@ class DistanceCalculator implements ArgumentInterface
                     'element' => [
                         'distance' => $element['distance'],
                         'duration' => $element['duration'],
-                        'departure_time' => $departureTime->format('Y-m-d H:i'),
-                        'arrival_time' => $arrivalTime->format('Y-m-d H:i')
+                        'departure_time' => $departureTime->format('d.m.Y H:i'),
+                        'arrival_time' => $arrivalTime->format('d.m.Y H:i')
                     ],
                     'raw_json' => $responseBody
                 ];
@@ -265,8 +265,8 @@ class DistanceCalculator implements ArgumentInterface
                     'element' => [
                         'distance' => ['text' => $distanceText, 'value' => $summary['length']],
                         'duration' => ['text' => $durationText, 'value' => $summary['duration']],
-                        'departure_time' => $departureTime->format('Y-m-d H:i'),
-                        'arrival_time' => $arrivalTime->format('Y-m-d H:i')
+                        'departure_time' => $departureTime->format('d.m.Y H:i'),
+                        'arrival_time' => $arrivalTime->format('d.m.Y H:i')
                     ],
                     'raw_json' => $responseBody
                 ];

@@ -227,7 +227,11 @@ $exampleAddresses = [
                                 $tbody.empty();
                                 $.each(response.shipping_costs, function(i, cost) {
                                     var $tr = $('<tr>');
-                                    $('<td>').text(cost.method).appendTo($tr);
+                                    var methodText = cost.method;
+                                    if (cost.distance) {
+                                        methodText += ' <span style="font-size: 0.85em; color: #666;">(' + cost.distance + ')</span>';
+                                    }
+                                    $('<td>').html(methodText).appendTo($tr);
                                     $('<td>').css('font-weight', 'bold').text(cost.price).appendTo($tr);
                                     $tbody.append($tr);
                                 });

@@ -80,6 +80,7 @@ class Calculate implements HttpPostActionInterface, CsrfAwareActionInterface
                     foreach ($rawCosts as $cost) {
                         $shippingCosts[] = [
                             'method' => $cost['method'],
+                            'description' => $cost['description'] ?? '',
                             'price' => $cost['price'],
                             'formatted_price' => $this->pricingHelper->currency($cost['price'], true, false),
                             'distance' => isset($cost['distance']) ? round($cost['distance'], 1) . ' km' : null

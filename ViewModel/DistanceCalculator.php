@@ -127,8 +127,8 @@ class DistanceCalculator implements ArgumentInterface
             $price = $this->courierShipping->calculatePrice($qty);
             if ($price > 0) {
                 $costs[] = [
-                    'method' => $this->courierShipping->getConfigData('name'),
-                    'description' => $this->courierShipping->getConfigData('description'),
+                    'method' => __($this->courierShipping->getConfigData('name')),
+                    'description' => __($this->courierShipping->getConfigData('description')),
                     'price' => $price
                 ];
             }
@@ -157,8 +157,8 @@ class DistanceCalculator implements ArgumentInterface
             $price = $method->calculatePrice($distanceKm, $qty);
             if ($price > 0) {
                 return [
-                    'method' => $method->getConfigData('name'),
-                    'description' => $method->getConfigData('description'),
+                    'method' => __($method->getConfigData('name')),
+                    'description' => __($method->getConfigData('description')),
                     'price' => $price,
                     'distance' => $distanceKm // Optional: return specific distance for debug/info
                 ];

@@ -80,7 +80,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
 
         <div x-show="error" class="p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200" x-text="error" style="display: none;"></div>
 
-        <div x-show="shippingCosts.length > 0" style="display: none;" class="animate-fade-in">
+        <div x-show="shippingCosts.length > 0 && calculated" style="display: none;" class="animate-fade-in">
             <div class="bg-gray-50 rounded-md p-4 border border-gray-200 mb-4">
                 <div class="flex justify-between items-center text-sm text-gray-600">
                     <span><?= $block->escapeHtml(__('Distance:')) ?></span>
@@ -125,6 +125,10 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
             </div>
         </div>
 
+        <div x-show="!calculated && shippingCosts.length > 0" class="p-4 bg-blue-50 text-blue-700 text-sm rounded-md border border-blue-200" style="display: none;">
+            <?= $block->escapeHtml(__('Quantity changed. Please click Calculate to update delivery costs.')) ?>
+        </div>
+
         <div x-show="calculated && shippingCosts.length === 0 && !error" class="p-4 bg-yellow-50 text-yellow-700 text-sm rounded-md border border-yellow-200" style="display: none;">
             <?= $block->escapeHtml(__('No delivery methods available for this quantity and location.')) ?>
         </div>
@@ -150,8 +154,10 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                 // Listen for Hyva qty update event
                 window.addEventListener('update-qty-' + this.productId, (event) => {
                     this.qty = parseFloat(event.detail) || 1;
+                    // Reset calculated state to force user to click Calculate again
+                    // or show a message that costs need update
                     if (this.calculated) {
-                        this.calculate();
+                        this.calculated = false;
                     }
                 });
 
@@ -162,18 +168,10 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                     qtyInput.addEventListener('change', (e) => {
                         this.qty = parseFloat(e.target.value) || 1;
                         if (this.calculated) {
-                            this.calculate();
+                            this.calculated = false;
                         }
                     });
                 }
-
-                // If postcode is prefilled, we could auto-calculate, but maybe better to let user click
-                // to avoid unnecessary API calls on page load
-                /*
-                if (this.postcode) {
-                    this.calculate();
-                }
-                */
             },
 
             get productTotal() {

@@ -3,7 +3,11 @@
 /** @var \GardenLawn\Delivery\ViewModel\DistanceCalculator $viewModel */
 $viewModel = $block->getData('view_model');
 
+// Debug info
+echo '<!-- Delivery Calculator Block Loaded -->';
+
 if (!$viewModel->isEnabled()) {
+    echo '<!-- Delivery Calculator Disabled via Config -->';
     return;
 }
 
@@ -15,11 +19,19 @@ if (!$product) {
     $product = $registry->registry('current_product');
 }
 
+// Debug SKU
+if ($product) {
+    echo '<!-- Product SKU: ' . $block->escapeHtml($product->getSku()) . ' -->';
+} else {
+    echo '<!-- Product Not Found in Block -->';
+}
+
 // Check if product is eligible (e.g. by SKU or Attribute)
 $targetSku = 'trawa-w-rolce'; // Or get from config
 // TEMPORARY: Commented out SKU check for debugging
 /*
 if ($product && $product->getSku() !== $targetSku) {
+    echo '<!-- SKU Mismatch. Expected: ' . $targetSku . ' -->';
     return;
 }
 */
@@ -37,7 +49,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
 
 <div class="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm" x-data="productDeliveryCalculator()">
     <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
         </svg>
@@ -49,13 +61,13 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
             <label class="block text-sm font-medium text-gray-700 mb-1"><?= $block->escapeHtml(__('Destination Postcode')) ?></label>
             <div class="flex gap-2">
                 <input type="text" x-model="postcode" placeholder="e.g. 00-001"
-                       class="form-input w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                       class="form-input w-full"
                        @keydown.enter.prevent="calculate"
                 >
-                <button type="button" @click="calculate" class="btn btn-primary px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50" :disabled="isLoading">
+                <button type="button" @click="calculate" class="btn btn-secondary shrink-0" :disabled="isLoading">
                     <span x-show="!isLoading"><?= $block->escapeHtml(__('Calculate')) ?></span>
                     <span x-show="isLoading" class="flex items-center gap-2">
-                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg class="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -79,10 +91,10 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
             <h4 class="text-sm font-semibold text-gray-900 mb-2"><?= $block->escapeHtml(__('Available Delivery Methods')) ?></h4>
             <div class="space-y-2">
                 <template x-for="(cost, index) in shippingCosts" :key="cost.method">
-                    <label class="flex items-start justify-between p-3 border rounded-md cursor-pointer hover:bg-blue-50 transition-colors"
-                           :class="selectedMethodIndex === index ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 bg-white'">
+                    <label class="flex items-start justify-between p-3 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+                           :class="selectedMethodIndex === index ? 'border-primary bg-blue-50 ring-1 ring-primary' : 'border-gray-200 bg-white'">
                         <div class="flex items-start gap-3">
-                            <input type="radio" name="delivery_method" :value="index" x-model="selectedMethodIndex" class="text-blue-600 focus:ring-blue-500 mt-1">
+                            <input type="radio" name="delivery_method" :value="index" x-model="selectedMethodIndex" class="text-primary focus:ring-primary mt-1">
                             <div>
                                 <span class="text-sm font-medium text-gray-900 block" x-text="cost.method"></span>
                                 <span class="text-xs text-gray-500 block mt-1" x-show="cost.description" x-text="cost.description"></span>
@@ -107,7 +119,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                     </div>
                     <div class="flex justify-between text-lg font-bold text-gray-900 border-t border-gray-200 pt-2 mt-2">
                         <span><?= $block->escapeHtml(__('Total Estimated Cost')) ?></span>
-                        <span class="text-blue-600" x-text="formatPrice(grandTotal)"></span>
+                        <span class="text-primary" x-text="formatPrice(grandTotal)"></span>
                     </div>
                 </div>
             </div>

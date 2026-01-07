@@ -8,7 +8,8 @@ if (!$viewModel->isEnabled()) {
 }
 
 $destination = $block->getRequest()->getParam('destination');
-$result = $destination ? $viewModel->getDistance($destination) : null;
+$origin = $viewModel->getDefaultOrigin();
+$result = ($destination && $origin) ? $viewModel->getDistance($origin, $destination) : null;
 ?>
 
 <div class="p-6 bg-white shadow-md rounded-lg my-8">
@@ -26,11 +27,24 @@ $result = $destination ? $viewModel->getDistance($destination) : null;
     </form>
 
     <?php if ($result): ?>
-        <div class="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
-            <p class="text-green-800 font-semibold">
-                <?= $block->escapeHtml(__('Distance: %1', $result['distance']['text'])) ?>
-                (<?= $block->escapeHtml(__('Duration: %1', $result['duration']['text'])) ?>)
-            </p>
+        <?php if (isset($result['error'])): ?>
+            <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+                <?= $block->escapeHtml(__('Error: %1', $result['error'])) ?>
+            </div>
+        <?php else: ?>
+            <div class="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
+                <p class="text-green-800 font-semibold">
+                    <?= $block->escapeHtml(__('Distance: %1', $result['element']['distance']['text'])) ?>
+                    (<?= $block->escapeHtml(__('Duration: %1', $result['element']['duration']['text'])) ?>)
+                </p>
+                <p class="text-sm text-green-700 mt-2">
+                    <?= $block->escapeHtml(__('Estimated Arrival: %1', $result['element']['arrival_time'])) ?>
+                </p>
+            </div>
+        <?php endif; ?>
+    <?php elseif ($destination && !$origin): ?>
+        <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+            <?= $block->escapeHtml(__('Warehouse origin is not configured.')) ?>
         </div>
     <?php elseif ($destination): ?>
         <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">

@@ -43,11 +43,11 @@
                 <target_sku>trawa-w-rolce</target_sku>
                 <prices_table>
                     {
-                        "delivers": {
-                            "courier": [
-                                {"m2": 35.0, "price": 327.0}
-                            ]
-                        }
+                    "delivers": {
+                    "courier": [
+                    {"m2":35.0, "price":327.0}
+                    ]
+                    }
                     }
                 </prices_table>
                 <price_supplement>0</price_supplement>
@@ -109,6 +109,70 @@
                 <base_km>1</base_km>
                 <sort_order>50</sort_order>
             </distanceshipping>
+
+            <!-- New Direct Transport Methods -->
+            <direct_no_lift>
+                <active>1</active>
+                <model>GardenLawn\Delivery\Model\Carrier\DirectNoLift</model>
+                <title>Direct Transport (No Lift)</title>
+                <name>Direct Transport without Lift</name>
+                <target_sku>trawa-w-rolce</target_sku>
+                <max_qty>950</max_qty>
+                <pricing_config>
+                    {
+                        "tiers": [
+                            {"min_distance": 500, "price": 5, "type": "per_km"},
+                            {"min_distance": 300, "price": 7, "type": "per_km"},
+                            {"min_distance": 150, "price": 9, "type": "per_km"},
+                            {"min_distance": 50, "price": 1500, "type": "fixed"},
+                            {"min_distance": 0, "price": 1000, "type": "fixed"}
+                        ]
+                    }
+                </pricing_config>
+                <sort_order>60</sort_order>
+            </direct_no_lift>
+
+            <direct_lift>
+                <active>1</active>
+                <model>GardenLawn\Delivery\Model\Carrier\DirectLift</model>
+                <title>Direct Transport (With Lift)</title>
+                <name>Direct Transport with Lift</name>
+                <target_sku>trawa-w-rolce</target_sku>
+                <max_qty>350</max_qty>
+                <pricing_config>
+                    {
+                        "tiers": [
+                            {"min_distance": 500, "price": 6, "type": "per_km"},
+                            {"min_distance": 300, "price": 8, "type": "per_km"},
+                            {"min_distance": 150, "price": 10, "type": "per_km"},
+                            {"min_distance": 50, "price": 1600, "type": "fixed"},
+                            {"min_distance": 0, "price": 1100, "type": "fixed"}
+                        ]
+                    }
+                </pricing_config>
+                <sort_order>70</sort_order>
+            </direct_lift>
+
+            <direct_forklift>
+                <active>1</active>
+                <model>GardenLawn\Delivery\Model\Carrier\DirectForklift</model>
+                <title>Direct Transport (With Forklift)</title>
+                <name>Direct Transport with Forklift</name>
+                <target_sku>trawa-w-rolce</target_sku>
+                <max_qty>800</max_qty>
+                <pricing_config>
+                    {
+                        "tiers": [
+                            {"min_distance": 500, "price": 7, "type": "per_km"},
+                            {"min_distance": 300, "price": 9, "type": "per_km"},
+                            {"min_distance": 150, "price": 11, "type": "per_km"},
+                            {"min_distance": 50, "price": 1700, "type": "fixed"},
+                            {"min_distance": 0, "price": 1200, "type": "fixed"}
+                        ]
+                    }
+                </pricing_config>
+                <sort_order>80</sort_order>
+            </direct_forklift>
         </carriers>
     </default>
 </config>

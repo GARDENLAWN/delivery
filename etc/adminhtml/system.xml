@@ -241,6 +241,93 @@
                     <label>Sort Order</label>
                 </field>
             </group>
+
+            <!-- Direct Transport (No Lift) -->
+            <group id="direct_no_lift" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Direct Transport (No Lift)</label>
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Title</label>
+                </field>
+                <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Method Name</label>
+                </field>
+                <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Target Product SKU</label>
+                </field>
+                <field id="max_qty" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Max Quantity (m2)</label>
+                    <comment>Hide method if quantity exceeds this value</comment>
+                </field>
+                <field id="pricing_config" translate="label" type="textarea" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Pricing Configuration (JSON)</label>
+                    <comment><![CDATA[JSON format: {"tiers":[{"min_distance":0,"price":1000,"type":"fixed"},{"min_distance":150,"price":9,"type":"per_km"}]}]]></comment>
+                </field>
+                <field id="sort_order" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Sort Order</label>
+                </field>
+            </group>
+
+            <!-- Direct Transport (With Lift) -->
+            <group id="direct_lift" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Direct Transport (With Lift)</label>
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Title</label>
+                </field>
+                <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Method Name</label>
+                </field>
+                <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Target Product SKU</label>
+                </field>
+                <field id="max_qty" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Max Quantity (m2)</label>
+                    <comment>Hide method if quantity exceeds this value</comment>
+                </field>
+                <field id="pricing_config" translate="label" type="textarea" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Pricing Configuration (JSON)</label>
+                    <comment><![CDATA[JSON format: {"tiers":[{"min_distance":0,"price":1100,"type":"fixed"},{"min_distance":150,"price":10,"type":"per_km"}]}]]></comment>
+                </field>
+                <field id="sort_order" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Sort Order</label>
+                </field>
+            </group>
+
+            <!-- Direct Transport (With Forklift) -->
+            <group id="direct_forklift" translate="label" type="text" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Direct Transport (With Forklift)</label>
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Title</label>
+                </field>
+                <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Method Name</label>
+                </field>
+                <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Target Product SKU</label>
+                </field>
+                <field id="max_qty" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Max Quantity (m2)</label>
+                    <comment>Hide method if quantity exceeds this value</comment>
+                </field>
+                <field id="pricing_config" translate="label" type="textarea" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Pricing Configuration (JSON)</label>
+                    <comment><![CDATA[JSON format: {"tiers":[{"min_distance":0,"price":1200,"type":"fixed"},{"min_distance":150,"price":11,"type":"per_km"}]}]]></comment>
+                </field>
+                <field id="sort_order" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Sort Order</label>
+                </field>
+            </group>
         </section>
     </system>
 </config>

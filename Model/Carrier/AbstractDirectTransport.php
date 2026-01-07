@@ -112,7 +112,27 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
             return false;
         }
 
-        $destination = $request->getDestStreet() . ', ' . $request->getDestPostcode() . ' ' . $request->getDestCity();
+        // Build destination address carefully
+        $destParts = [];
+        if ($request->getDestStreet()) {
+            $destParts[] = $request->getDestStreet();
+        }
+        if ($request->getDestPostcode()) {
+            $destParts[] = $request->getDestPostcode();
+        }
+        if ($request->getDestCity()) {
+            $destParts[] = $request->getDestCity();
+        }
+        if ($request->getDestCountryId()) {
+            $destParts[] = $request->getDestCountryId();
+        }
+
+        $destination = implode(', ', $destParts);
+
+        // If address is too short (e.g. just country), skip calculation to avoid API errors/costs
+        if (strlen($destination) < 5) {
+            return false;
+        }
 
         try {
             $distance = $this->distanceService->getDistance($origin, $destination);

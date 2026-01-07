@@ -1,0 +1,157 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+/** @var \GardenLawn\Delivery\ViewModel\DistanceCalculator $viewModel */
+$viewModel = $block->getData('view_model');
+
+// Debug info
+echo '<!-- Delivery Calculator Block Loaded -->';
+
+if (!$viewModel->isEnabled()) {
+    echo '<!-- Delivery Calculator Disabled via Config -->';
+    return;
+}
+
+// Get current product
+$product = $block->getProduct();
+if (!$product) {
+    $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+    $registry = $objectManager->get('Magento\Framework\Registry');
+    $product = $registry->registry('current_product');
+}
+
+// Debug SKU
+if ($product) {
+    echo '<!-- Product SKU: ' . $block->escapeHtml($product->getSku()) . ' -->';
+} else {
+    echo '<!-- Product Not Found in Block -->';
+}
+
+// Check if product is eligible (e.g. by SKU or Attribute)
+$targetSku = 'Trawa-w-rolce'; // Or get from config
+// TEMPORARY: Commented out SKU check for debugging
+
+if ($product && $product->getSku() !== $targetSku) {
+    echo '<!-- SKU Mismatch. Expected: ' . $targetSku . ' -->';
+    return;
+}
+
+$defaultOrigin = $viewModel->getDefaultOrigin();
+?>
+
+<div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md" x-data="productDeliveryCalculator()">
+    <h3 class="text-lg font-semibold mb-2"><?= $block->escapeHtml(__('Estimate Delivery Cost')) ?></h3>
+
+    <div class="space-y-3">
+        <div>
+            <label class="block text-sm font-medium text-gray-700"><?= $block->escapeHtml(__('Destination Postcode')) ?></label>
+            <div class="flex gap-2 mt-1">
+                <input type="text" x-model="postcode" placeholder="e.g. 00-001"
+                       class="form-input w-full"
+                       @keydown.enter.prevent="calculate"
+                >
+                <button type="button" @click="calculate" class="btn btn-secondary" :disabled="isLoading">
+                    <span x-show="!isLoading"><?= $block->escapeHtml(__('Check')) ?></span>
+                    <span x-show="isLoading"><?= $block->escapeHtml(__('...')) ?></span>
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-1"><?= $block->escapeHtml(__('Enter postcode to see delivery options.')) ?></p>
+        </div>
+
+        <div x-show="error" class="text-red-600 text-sm" x-text="error" style="display: none;"></div>
+
+        <div x-show="shippingCosts.length > 0" style="display: none;">
+            <table class="min-w-full text-sm">
+                <tbody class="divide-y divide-gray-200">
+                    <template x-for="cost in shippingCosts" :key="cost.method">
+                        <tr>
+                            <td class="py-2 text-gray-900" x-text="cost.method"></td>
+                            <td class="py-2 text-right font-medium text-gray-900" x-text="cost.formatted_price"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+            <p class="text-xs text-gray-500 mt-2">
+                <?= $block->escapeHtml(__('Distance: ')) ?> <span x-text="distance"></span>
+            </p>
+        </div>
+
+        <div x-show="calculated && shippingCosts.length === 0 && !error" class="text-yellow-600 text-sm" style="display: none;">
+            <?= $block->escapeHtml(__('No delivery methods available for this quantity and location.')) ?>
+        </div>
+    </div>
+</div>
+
+<script>
+    function productDeliveryCalculator() {
+        return {
+            postcode: '',
+            qty: 1,
+            isLoading: false,
+            error: null,
+            shippingCosts: [],
+            distance: '',
+            calculated: false,
+
+            init() {
+                // Watch for quantity changes on the product page
+                // Hyva usually uses Alpine for qty, we can try to hook into it or listen to input change
+                const qtyInput = document.getElementById('qty');
+                if (qtyInput) {
+                    this.qty = parseFloat(qtyInput.value) || 1;
+                    qtyInput.addEventListener('change', (e) => {
+                        this.qty = parseFloat(e.target.value) || 1;
+                        if (this.calculated) {
+                            this.calculate();
+                        }
+                    });
+                }
+            },
+
+            calculate() {
+                if (!this.postcode || this.postcode.length < 3) {
+                    this.error = '<?= $block->escapeJs(__('Please enter a valid postcode.')) ?>';
+                    return;
+                }
+
+                // Update qty from input just in case
+                const qtyInput = document.getElementById('qty');
+                if (qtyInput) {
+                    this.qty = parseFloat(qtyInput.value) || 1;
+                }
+
+                this.isLoading = true;
+                this.error = null;
+                this.shippingCosts = [];
+                this.calculated = false;
+
+                fetch('<?= $block->getUrl('delivery/calculator/calculate') ?>', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({
+                        'destination': this.postcode + ', PL', // Assuming Poland for now
+                        'qty': this.qty
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        this.distance = data.distance;
+                        this.shippingCosts = data.shipping_costs;
+                        this.calculated = true;
+                    } else {
+                        this.error = data.message || '<?= $block->escapeJs(__('Error calculating delivery.')) ?>';
+                    }
+                })
+                .catch(() => {
+                    this.error = '<?= $block->escapeJs(__('An error occurred.')) ?>';
+                })
+                .finally(() => {
+                    this.isLoading = false;
+                });
+            }
+        }
+    }
+</script>

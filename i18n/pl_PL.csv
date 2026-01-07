@@ -116,6 +116,7 @@
 "Pricing Configuration (JSON)","Konfiguracja cen (JSON)"
 "Specific Origin Address","Specyficzny adres początkowy"
 "Leave empty to use default Warehouse Origin. Default: ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska","Zostaw puste, aby użyć domyślnego magazynu. Domyślnie: ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska"
-"Estimate Delivery & Total Cost","Oszacuj koszt dostawy i całkowity koszt"
+"Estimate Delivery & Total Cost","Szacowany koszt dostawy i całkowity"
 "Enter your postcode to see available delivery methods and total cost.","Wpisz kod pocztowy, aby zobaczyć dostępne metody dostawy i całkowity koszt."
 "Quantity changed. Please click Calculate to update delivery costs.","Ilość uległa zmianie. Kliknij Oblicz, aby zaktualizować koszty dostawy."
+"Delivery","Dostawa"

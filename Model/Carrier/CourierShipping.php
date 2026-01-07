@@ -2,7 +2,6 @@
 
 namespace GardenLawn\Delivery\Model\Carrier;
 
-use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Quote\Model\Quote\Address\RateRequest;
 use Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory;
@@ -18,7 +17,6 @@ class CourierShipping extends AbstractCarrier implements CarrierInterface
     protected $_code = 'couriershipping';
     protected ResultFactory $_rateResultFactory;
     protected MethodFactory $_rateMethodFactory;
-    protected CheckoutSession $checkoutSession;
 
     public function __construct(
         ScopeConfigInterface $scopeConfig,
@@ -26,13 +24,11 @@ class CourierShipping extends AbstractCarrier implements CarrierInterface
         LoggerInterface      $logger,
         ResultFactory        $rateResultFactory,
         MethodFactory        $rateMethodFactory,
-        CheckoutSession      $checkoutSession,
         array                $data = []
     )
     {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_rateMethodFactory = $rateMethodFactory;
-        $this->checkoutSession = $checkoutSession;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
 
@@ -93,16 +89,20 @@ class CourierShipping extends AbstractCarrier implements CarrierInterface
             return false;
         }
 
-        $quote = $this->checkoutSession->getQuote();
-        if (!$quote) {
+        $items = $request->getAllItems();
+        if (empty($items)) {
             return false;
         }
 
-        $items = $quote->getAllVisibleItems();
         $targetSku = strtolower($this->getConfigData('target_sku') ?? 'trawa-w-rolce');
 
         $qnt = 0;
         foreach ($items as $item) {
+            // Skip parent items for configurable products to avoid double counting
+            if ($item->getProduct()->isVirtual() || $item->getParentItem()) {
+                continue;
+            }
+
             if (strtolower($item->getSku()) === $targetSku) {
                 $qnt += $item->getQty();
             }

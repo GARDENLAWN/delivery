@@ -2,7 +2,6 @@
 
 namespace GardenLawn\Delivery\Model\Carrier;
 
-use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Quote\Model\Quote\Address\RateRequest;
 use Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory;
@@ -18,7 +17,6 @@ class CustomShipping extends AbstractCarrier implements CarrierInterface
     protected $_code = 'customshipping';
     protected ResultFactory $_rateResultFactory;
     protected MethodFactory $_rateMethodFactory;
-    protected CheckoutSession $checkoutSession;
 
     public function __construct(
         ScopeConfigInterface $scopeConfig,
@@ -26,12 +24,10 @@ class CustomShipping extends AbstractCarrier implements CarrierInterface
         LoggerInterface $logger,
         ResultFactory $rateResultFactory,
         MethodFactory $rateMethodFactory,
-        CheckoutSession $checkoutSession,
         array $data = []
     ) {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_rateMethodFactory = $rateMethodFactory;
-        $this->checkoutSession = $checkoutSession;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
 

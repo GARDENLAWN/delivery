@@ -3,7 +3,6 @@
 namespace GardenLawn\Delivery\Model\Carrier;
 
 use GardenLawn\Delivery\Service\DistanceService;
-use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Quote\Model\Quote\Address\RateRequest;
 use Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory;
@@ -19,7 +18,6 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
     protected $_code = 'courierwithelevatorshipping';
     protected ResultFactory $_rateResultFactory;
     protected MethodFactory $_rateMethodFactory;
-    protected CheckoutSession $checkoutSession;
     protected DistanceService $distanceService;
 
     public function __construct(
@@ -28,14 +26,12 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
         LoggerInterface      $logger,
         ResultFactory        $rateResultFactory,
         MethodFactory        $rateMethodFactory,
-        CheckoutSession      $checkoutSession,
         DistanceService      $distanceService,
         array                $data = []
     )
     {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_rateMethodFactory = $rateMethodFactory;
-        $this->checkoutSession = $checkoutSession;
         $this->distanceService = $distanceService;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
@@ -80,16 +76,20 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
             return false;
         }
 
-        $quote = $this->checkoutSession->getQuote();
-        if (!$quote) {
+        $items = $request->getAllItems();
+        if (empty($items)) {
             return false;
         }
 
-        $items = $quote->getAllVisibleItems();
         $targetSku = strtolower($this->getConfigData('target_sku') ?? 'trawa-w-rolce');
 
         $qnt = 0;
         foreach ($items as $item) {
+            // Skip parent items for configurable products to avoid double counting
+            if ($item->getProduct()->isVirtual() || $item->getParentItem()) {
+                continue;
+            }
+
             if (strtolower($item->getSku()) === $targetSku) {
                 $qnt += $item->getQty();
             }

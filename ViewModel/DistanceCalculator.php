@@ -3,6 +3,10 @@
 namespace GardenLawn\Delivery\ViewModel;
 
 use GardenLawn\Delivery\Helper\Config;
+use GardenLawn\Delivery\Model\Carrier\CourierShipping;
+use GardenLawn\Delivery\Model\Carrier\DirectForklift;
+use GardenLawn\Delivery\Model\Carrier\DirectLift;
+use GardenLawn\Delivery\Model\Carrier\DirectNoLift;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 use Magento\Framework\HTTP\Client\Curl;
 
@@ -10,11 +14,25 @@ class DistanceCalculator implements ArgumentInterface
 {
     private Config $config;
     private Curl $curl;
+    private CourierShipping $courierShipping;
+    private DirectNoLift $directNoLift;
+    private DirectLift $directLift;
+    private DirectForklift $directForklift;
 
-    public function __construct(Config $config, Curl $curl)
-    {
+    public function __construct(
+        Config $config,
+        Curl $curl,
+        CourierShipping $courierShipping,
+        DirectNoLift $directNoLift,
+        DirectLift $directLift,
+        DirectForklift $directForklift
+    ) {
         $this->config = $config;
         $this->curl = $curl;
+        $this->courierShipping = $courierShipping;
+        $this->directNoLift = $directNoLift;
+        $this->directLift = $directLift;
+        $this->directForklift = $directForklift;
     }
 
     public function isEnabled(): bool
@@ -36,6 +54,57 @@ class DistanceCalculator implements ArgumentInterface
         }
 
         return $this->getGoogleDistance($origin, $destination);
+    }
+
+    public function calculateShippingCosts(float $distanceKm, float $qty): array
+    {
+        $costs = [];
+
+        // 1. Courier Shipping (Pallet)
+        if ($this->courierShipping->getConfigFlag('active')) {
+            $price = $this->courierShipping->calculatePrice($qty);
+            if ($price > 0) {
+                $costs[] = [
+                    'method' => $this->courierShipping->getConfigData('name'),
+                    'price' => $price
+                ];
+            }
+        }
+
+        // 2. Direct No Lift
+        if ($this->directNoLift->getConfigFlag('active')) {
+            $price = $this->directNoLift->calculatePrice($distanceKm, $qty);
+            if ($price > 0) {
+                $costs[] = [
+                    'method' => $this->directNoLift->getConfigData('name'),
+                    'price' => $price
+                ];
+            }
+        }
+
+        // 3. Direct Lift
+        if ($this->directLift->getConfigFlag('active')) {
+            $price = $this->directLift->calculatePrice($distanceKm, $qty);
+            if ($price > 0) {
+                $costs[] = [
+                    'method' => $this->directLift->getConfigData('name'),
+                    'price' => $price
+                ];
+            }
+        }
+
+        // 4. Direct Forklift
+        if ($this->directForklift->getConfigFlag('active')) {
+            $price = $this->directForklift->calculatePrice($distanceKm, $qty);
+            if ($price > 0) {
+                $costs[] = [
+                    'method' => $this->directForklift->getConfigData('name'),
+                    'price' => $price
+                ];
+            }
+        }
+
+        return $costs;
     }
 
     private function getGoogleDistance(string $origin, string $destination): ?array
@@ -139,14 +208,6 @@ class DistanceCalculator implements ArgumentInterface
             if (!empty($truckParams['axleCount'])) {
                 $params['vehicle[axleCount]'] = (int)$truckParams['axleCount'];
             }
-
-            // vehicle[type] is problematic in v8 routing API and often not needed if dimensions are provided.
-            // We skip it to avoid "Invalid value" errors.
-            /*
-            if (!empty($truckParams['type'])) {
-                $params['vehicle[type]'] = $truckParams['type'];
-            }
-            */
 
             if (!empty($truckParams['hazardousGoods'])) {
                 $params['shippedHazardousGoods'] = $truckParams['hazardousGoods'];

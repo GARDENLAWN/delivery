@@ -6,9 +6,10 @@ use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
 use GardenLawn\Delivery\ViewModel\DistanceCalculator;
-use GardenLawn\Delivery\Model\Carrier\DistanceShipping;
 use GardenLawn\Delivery\Model\Carrier\CourierShipping;
-use GardenLawn\Delivery\Model\Carrier\CourierWithElevatorShipping;
+use GardenLawn\Delivery\Model\Carrier\DirectNoLift;
+use GardenLawn\Delivery\Model\Carrier\DirectLift;
+use GardenLawn\Delivery\Model\Carrier\DirectForklift;
 
 class Calculate extends Action
 {
@@ -16,24 +17,27 @@ class Calculate extends Action
 
     private JsonFactory $resultJsonFactory;
     private DistanceCalculator $distanceCalculator;
-    private DistanceShipping $distanceShipping;
     private CourierShipping $courierShipping;
-    private CourierWithElevatorShipping $courierWithElevatorShipping;
+    private DirectNoLift $directNoLift;
+    private DirectLift $directLift;
+    private DirectForklift $directForklift;
 
     public function __construct(
         Context $context,
         JsonFactory $resultJsonFactory,
         DistanceCalculator $distanceCalculator,
-        DistanceShipping $distanceShipping,
         CourierShipping $courierShipping,
-        CourierWithElevatorShipping $courierWithElevatorShipping
+        DirectNoLift $directNoLift,
+        DirectLift $directLift,
+        DirectForklift $directForklift
     ) {
         parent::__construct($context);
         $this->resultJsonFactory = $resultJsonFactory;
         $this->distanceCalculator = $distanceCalculator;
-        $this->distanceShipping = $distanceShipping;
         $this->courierShipping = $courierShipping;
-        $this->courierWithElevatorShipping = $courierWithElevatorShipping;
+        $this->directNoLift = $directNoLift;
+        $this->directLift = $directLift;
+        $this->directForklift = $directForklift;
     }
 
     public function execute()
@@ -89,35 +93,46 @@ class Calculate extends Action
                 $shippingCosts = [];
 
                 if ($quantity > 0) {
-                    // Distance Shipping
-                    if ($this->distanceShipping->getConfigFlag('active')) {
-                        $price = $this->distanceShipping->calculatePrice($distanceKm, $quantity);
-                        if ($price > 0) {
-                            $shippingCosts[] = [
-                                'method' => $this->distanceShipping->getConfigData('name'),
-                                'price' => $price
-                            ];
-                        }
-                    }
-
-                    // Courier Shipping
+                    // 1. Courier Shipping (Pallet)
                     if ($this->courierShipping->getConfigFlag('active')) {
                         $price = $this->courierShipping->calculatePrice($quantity);
                         if ($price > 0) {
                             $shippingCosts[] = [
                                 'method' => $this->courierShipping->getConfigData('name'),
-                                'price' => $price
+                                'price' => $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($price, true, false)
                             ];
                         }
                     }
 
-                    // Courier With Elevator Shipping
-                    if ($this->courierWithElevatorShipping->getConfigFlag('active')) {
-                        $price = $this->courierWithElevatorShipping->calculatePrice($distanceKm, $quantity);
+                    // 2. Direct No Lift
+                    if ($this->directNoLift->getConfigFlag('active')) {
+                        $price = $this->directNoLift->calculatePrice($distanceKm, $quantity);
                         if ($price > 0) {
                             $shippingCosts[] = [
-                                'method' => $this->courierWithElevatorShipping->getConfigData('name'),
-                                'price' => $price
+                                'method' => $this->directNoLift->getConfigData('name'),
+                                'price' => $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($price, true, false)
+                            ];
+                        }
+                    }
+
+                    // 3. Direct Lift
+                    if ($this->directLift->getConfigFlag('active')) {
+                        $price = $this->directLift->calculatePrice($distanceKm, $quantity);
+                        if ($price > 0) {
+                            $shippingCosts[] = [
+                                'method' => $this->directLift->getConfigData('name'),
+                                'price' => $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($price, true, false)
+                            ];
+                        }
+                    }
+
+                    // 4. Direct Forklift
+                    if ($this->directForklift->getConfigFlag('active')) {
+                        $price = $this->directForklift->calculatePrice($distanceKm, $quantity);
+                        if ($price > 0) {
+                            $shippingCosts[] = [
+                                'method' => $this->directForklift->getConfigData('name'),
+                                'price' => $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($price, true, false)
                             ];
                         }
                     }

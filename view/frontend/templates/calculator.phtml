@@ -8,21 +8,37 @@ if (!$viewModel->isEnabled()) {
 }
 
 $destination = $block->getRequest()->getParam('destination');
+$qty = (float)$block->getRequest()->getParam('qty');
 $origin = $viewModel->getDefaultOrigin();
 $result = ($destination && $origin) ? $viewModel->getDistance($origin, $destination) : null;
+$shippingCosts = [];
+
+if ($result && !isset($result['error']) && $qty > 0) {
+    $distanceKm = $result['element']['distance']['value'] / 1000;
+    $shippingCosts = $viewModel->calculateShippingCosts($distanceKm, $qty);
+}
 ?>
 
 <div class="p-6 bg-white shadow-md rounded-lg my-8">
-    <h2 class="text-2xl font-bold mb-4"><?= $block->escapeHtml(__('Distance Calculator')) ?></h2>
+    <h2 class="text-2xl font-bold mb-4"><?= $block->escapeHtml(__('Delivery Cost Calculator')) ?></h2>
 
     <form action="" method="get" class="space-y-4">
-        <div>
-            <label class="block text-sm font-medium"><?= $block->escapeHtml(__('Destination Address')) ?>:</label>
-            <input type="text" name="destination" value="<?= $block->escapeHtmlAttr($destination) ?>"
-                   class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium"><?= $block->escapeHtml(__('Destination Address')) ?>:</label>
+                <input type="text" name="destination" value="<?= $block->escapeHtmlAttr($destination) ?>"
+                       class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="e.g. Warsaw, Poland" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium"><?= $block->escapeHtml(__('Quantity (m2)')) ?>:</label>
+                <input type="number" name="qty" value="<?= $block->escapeHtmlAttr($qty ?: '') ?>" step="0.01" min="0"
+                       class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="e.g. 100" required>
+            </div>
         </div>
         <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-            <?= $block->escapeHtml(__('Calculate Distance')) ?>
+            <?= $block->escapeHtml(__('Calculate')) ?>
         </button>
     </form>
 
@@ -32,23 +48,56 @@ $result = ($destination && $origin) ? $viewModel->getDistance($origin, $destinat
                 <?= $block->escapeHtml(__('Error: %1', $result['error'])) ?>
             </div>
         <?php else: ?>
-            <div class="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
-                <p class="text-green-800 font-semibold">
-                    <?= $block->escapeHtml(__('Distance: %1', $result['element']['distance']['text'])) ?>
-                    (<?= $block->escapeHtml(__('Duration: %1', $result['element']['duration']['text'])) ?>)
+            <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                <h3 class="text-lg font-semibold mb-2"><?= $block->escapeHtml(__('Route Details')) ?></h3>
+                <p class="text-gray-700">
+                    <strong><?= $block->escapeHtml(__('Distance:')) ?></strong> <?= $block->escapeHtml($result['element']['distance']['text']) ?>
                 </p>
-                <p class="text-sm text-green-700 mt-2">
-                    <?= $block->escapeHtml(__('Estimated Arrival: %1', $result['element']['arrival_time'])) ?>
+                <p class="text-gray-700">
+                    <strong><?= $block->escapeHtml(__('Estimated Duration:')) ?></strong> <?= $block->escapeHtml($result['element']['duration']['text']) ?>
                 </p>
             </div>
+
+            <?php if (!empty($shippingCosts)): ?>
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-4"><?= $block->escapeHtml(__('Available Shipping Methods')) ?></h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <?= $block->escapeHtml(__('Method')) ?>
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <?= $block->escapeHtml(__('Price')) ?>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                            <?php foreach ($shippingCosts as $cost): ?>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <?= $block->escapeHtml($cost['method']) ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= /* @noEscape */ $block->formatPrice($cost['price']) ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php elseif ($qty > 0): ?>
+                <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800">
+                    <?= $block->escapeHtml(__('No shipping methods available for this quantity and distance.')) ?>
+                </div>
+            <?php endif; ?>
+
         <?php endif; ?>
     <?php elseif ($destination && !$origin): ?>
         <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
             <?= $block->escapeHtml(__('Warehouse origin is not configured.')) ?>
-        </div>
-    <?php elseif ($destination): ?>
-        <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
-            <?= $block->escapeHtml(__('Could not calculate distance. Please check the address.')) ?>
         </div>
     <?php endif; ?>
 </div>

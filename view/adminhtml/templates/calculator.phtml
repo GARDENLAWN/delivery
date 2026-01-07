@@ -83,7 +83,7 @@ $exampleAddresses = [
                             <span><?= $block->escapeHtml(__('Quantity (m²)')) ?></span>
                         </label>
                         <div class="control">
-                            <input type="number" name="quantity" id="quantity" class="input-text" style="width: 100%;" required />
+                            <input type="number" name="quantity" id="quantity" class="input-text" style="width: 100%;" step="0.01" min="0" required />
                         </div>
                     </div>
 
@@ -110,8 +110,18 @@ $exampleAddresses = [
                     <?= $block->escapeHtml(__('Arrival: ')) ?><span id="result-arrival"></span>
 
                     <div id="result-shipping-costs" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #e3e3e3; display: none;">
-                        <strong><?= $block->escapeHtml(__('Shipping Costs Simulation:')) ?></strong>
-                        <ul id="shipping-costs-list" style="list-style: none; padding: 0; margin-top: 5px;"></ul>
+                        <h3 class="admin__heading-m"><?= $block->escapeHtml(__('Shipping Costs Simulation:')) ?></h3>
+                        <table class="data-grid" style="margin-top: 10px;">
+                            <thead>
+                                <tr>
+                                    <th class="data-grid-th"><?= $block->escapeHtml(__('Method')) ?></th>
+                                    <th class="data-grid-th"><?= $block->escapeHtml(__('Price')) ?></th>
+                                </tr>
+                            </thead>
+                            <tbody id="shipping-costs-body">
+                                <!-- Costs will be injected here -->
+                            </tbody>
+                        </table>
                     </div>
 
                     <br/><br/>
@@ -213,10 +223,13 @@ $exampleAddresses = [
                             $('#result-json').text(response.raw_json);
 
                             if (response.shipping_costs && response.shipping_costs.length > 0) {
-                                var $list = $('#shipping-costs-list');
-                                $list.empty();
+                                var $tbody = $('#shipping-costs-body');
+                                $tbody.empty();
                                 $.each(response.shipping_costs, function(i, cost) {
-                                    $('<li>').text(cost.method + ': ' + cost.price).appendTo($list);
+                                    var $tr = $('<tr>');
+                                    $('<td>').text(cost.method).appendTo($tr);
+                                    $('<td>').css('font-weight', 'bold').text(cost.price).appendTo($tr);
+                                    $tbody.append($tr);
                                 });
                                 $('#result-shipping-costs').show();
                             } else {

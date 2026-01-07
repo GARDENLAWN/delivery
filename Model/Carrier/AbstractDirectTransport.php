@@ -43,6 +43,24 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
         return [$this->_code => $this->getConfigData('name')];
     }
 
+    /**
+     * Calculate price for given distance and quantity
+     * Returns 0.0 if method is not applicable (e.g. max qty exceeded)
+     */
+    public function calculatePrice(float $distance, float $qty): float
+    {
+        if (!$this->getConfigFlag('active')) {
+            return 0.0;
+        }
+
+        $maxQty = (float)$this->getConfigData('max_qty');
+        if ($maxQty > 0 && $qty > $maxQty) {
+            return 0.0;
+        }
+
+        return $this->calculateTierPrice($distance);
+    }
+
     public function collectRates(RateRequest $request): Result|bool
     {
         if (!$this->getConfigFlag('active')) {

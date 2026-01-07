@@ -9,6 +9,10 @@ use GardenLawn\Delivery\Model\Carrier\DirectLift;
 use GardenLawn\Delivery\Model\Carrier\DirectNoLift;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 use Magento\Framework\HTTP\Client\Curl;
+use Magento\Checkout\Model\Session as CheckoutSession;
+use Magento\Customer\Model\Session as CustomerSession;
+use Magento\Customer\Api\CustomerRepositoryInterface;
+use Magento\Customer\Api\AddressRepositoryInterface;
 
 class DistanceCalculator implements ArgumentInterface
 {
@@ -18,6 +22,10 @@ class DistanceCalculator implements ArgumentInterface
     private DirectNoLift $directNoLift;
     private DirectLift $directLift;
     private DirectForklift $directForklift;
+    private CheckoutSession $checkoutSession;
+    private CustomerSession $customerSession;
+    private CustomerRepositoryInterface $customerRepository;
+    private AddressRepositoryInterface $addressRepository;
 
     // Cache for distances within request to avoid duplicate API calls
     private array $distanceCache = [];
@@ -28,7 +36,11 @@ class DistanceCalculator implements ArgumentInterface
         CourierShipping $courierShipping,
         DirectNoLift $directNoLift,
         DirectLift $directLift,
-        DirectForklift $directForklift
+        DirectForklift $directForklift,
+        CheckoutSession $checkoutSession,
+        CustomerSession $customerSession,
+        CustomerRepositoryInterface $customerRepository,
+        AddressRepositoryInterface $addressRepository
     ) {
         $this->config = $config;
         $this->curl = $curl;
@@ -36,6 +48,10 @@ class DistanceCalculator implements ArgumentInterface
         $this->directNoLift = $directNoLift;
         $this->directLift = $directLift;
         $this->directForklift = $directForklift;
+        $this->checkoutSession = $checkoutSession;
+        $this->customerSession = $customerSession;
+        $this->customerRepository = $customerRepository;
+        $this->addressRepository = $addressRepository;
     }
 
     public function isEnabled(): bool
@@ -46,6 +62,43 @@ class DistanceCalculator implements ArgumentInterface
     public function getDefaultOrigin(): ?string
     {
         return $this->config->getWarehouseOrigin();
+    }
+
+    /**
+     * Try to get postcode from Quote or Customer Session
+     */
+    public function getCustomerPostcode(): ?string
+    {
+        // 1. Try Quote Address
+        try {
+            $quote = $this->checkoutSession->getQuote();
+            $shippingAddress = $quote->getShippingAddress();
+            $postcode = $shippingAddress->getPostcode();
+
+            if ($postcode && $postcode !== '*') {
+                return $postcode;
+            }
+        } catch (\Exception $e) {
+            // Quote might not exist or be accessible
+        }
+
+        // 2. Try Customer Default Shipping Address
+        if ($this->customerSession->isLoggedIn()) {
+            try {
+                $customerId = $this->customerSession->getCustomerId();
+                $customer = $this->customerRepository->getById($customerId);
+                $defaultShippingId = $customer->getDefaultShipping();
+
+                if ($defaultShippingId) {
+                    $address = $this->addressRepository->getById($defaultShippingId);
+                    return $address->getPostcode();
+                }
+            } catch (\Exception $e) {
+                // Customer or address might not exist
+            }
+        }
+
+        return null;
     }
 
     public function getDistance(string $origin, string $destination): ?array

@@ -44,6 +44,7 @@ if ($product) {
 }
 
 $defaultOrigin = $viewModel->getDefaultOrigin();
+$prefilledPostcode = $viewModel->getCustomerPostcode();
 ?>
 
 <div class="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm" x-data="productDeliveryCalculator()">
@@ -133,7 +134,7 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
 <script>
     function productDeliveryCalculator() {
         return {
-            postcode: '',
+            postcode: '<?= $escaper->escapeJs($prefilledPostcode) ?>',
             qty: 1,
             productPrice: <?= (float)$productPrice ?>,
             productId: <?= (int)$productId ?>,
@@ -165,6 +166,14 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
                         }
                     });
                 }
+
+                // If postcode is prefilled, we could auto-calculate, but maybe better to let user click
+                // to avoid unnecessary API calls on page load
+                /*
+                if (this.postcode) {
+                    this.calculate();
+                }
+                */
             },
 
             get productTotal() {

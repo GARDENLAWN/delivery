@@ -84,6 +84,7 @@ class Calculate extends Action
                         $formattedPrice = $this->_objectManager->get('Magento\Framework\Pricing\Helper\Data')->currency($cost['price'], true, false);
                         $shippingCosts[] = [
                             'method' => $cost['method'],
+                            'description' => $cost['description'] ?? '',
                             'price' => $formattedPrice,
                             'distance' => isset($cost['distance']) ? round($cost['distance'], 1) . ' km' : null
                         ];

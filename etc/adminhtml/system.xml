@@ -111,6 +111,10 @@
                 <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Method Name</label>
                 </field>
+                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Description</label>
+                    <comment>Information for customer about this delivery method</comment>
+                </field>
                 <field id="sort_order" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Sort Order</label>
                 </field>
@@ -128,6 +132,10 @@
                 </field>
                 <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Method Name</label>
+                </field>
+                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Description</label>
+                    <comment>Information for customer about this delivery method</comment>
                 </field>
                 <field id="products_sku" translate="label" type="textarea" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Free Shipping Product SKUs</label>
@@ -150,6 +158,10 @@
                 </field>
                 <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Method Name</label>
+                </field>
+                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Description</label>
+                    <comment>Information for customer about this delivery method</comment>
                 </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
@@ -180,6 +192,10 @@
                 </field>
                 <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Method Name</label>
+                </field>
+                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Description</label>
+                    <comment>Information for customer about this delivery method</comment>
                 </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
@@ -218,6 +234,10 @@
                 <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Method Name</label>
                 </field>
+                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Description</label>
+                    <comment>Information for customer about this delivery method</comment>
+                </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
                     <comment>SKU to calculate shipping for (default: trawa-w-rolce)</comment>
@@ -255,6 +275,10 @@
                 <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Method Name</label>
                 </field>
+                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Description</label>
+                    <comment>Information for customer about this delivery method</comment>
+                </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
                 </field>
@@ -288,6 +312,10 @@
                 <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Method Name</label>
                 </field>
+                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Description</label>
+                    <comment>Information for customer about this delivery method</comment>
+                </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
                 </field>
@@ -320,6 +348,10 @@
                 </field>
                 <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Method Name</label>
+                </field>
+                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Description</label>
+                    <comment>Information for customer about this delivery method</comment>
                 </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>

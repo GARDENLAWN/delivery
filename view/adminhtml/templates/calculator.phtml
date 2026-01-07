@@ -231,6 +231,9 @@ $exampleAddresses = [
                                     if (cost.distance) {
                                         methodText += ' <span style="font-size: 0.85em; color: #666;">(' + cost.distance + ')</span>';
                                     }
+                                    if (cost.description) {
+                                        methodText += '<br><span style="font-size: 0.85em; color: #666; font-style: italic;">' + cost.description + '</span>';
+                                    }
                                     $('<td>').html(methodText).appendTo($tr);
                                     $('<td>').css('font-weight', 'bold').text(cost.price).appendTo($tr);
                                     $tbody.append($tr);

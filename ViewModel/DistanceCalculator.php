@@ -45,7 +45,7 @@ class DistanceCalculator implements ArgumentInterface
 
     public function getDefaultOrigin(): ?string
     {
-        return "ul. Piaskowa 21, Turowo 78-400 Szczecinek, Polska" ?? $this->config->getWarehouseOrigin();
+        return $this->config->getWarehouseOrigin();
     }
 
     public function getDistance(string $origin, string $destination): ?array
@@ -75,6 +75,7 @@ class DistanceCalculator implements ArgumentInterface
             if ($price > 0) {
                 $costs[] = [
                     'method' => $this->courierShipping->getConfigData('name'),
+                    'description' => $this->courierShipping->getConfigData('description'),
                     'price' => $price
                 ];
             }
@@ -104,6 +105,7 @@ class DistanceCalculator implements ArgumentInterface
             if ($price > 0) {
                 return [
                     'method' => $method->getConfigData('name'),
+                    'description' => $method->getConfigData('description'),
                     'price' => $price,
                     'distance' => $distanceKm // Optional: return specific distance for debug/info
                 ];

@@ -96,6 +96,11 @@ if ($result && !isset($result['error']) && $qty > 0) {
                                                 (<?= $block->escapeHtml(__('Distance: %1 km', round($cost['distance'], 1))) ?>)
                                             </span>
                                         <?php endif; ?>
+                                        <?php if (!empty($cost['description'])): ?>
+                                            <span class="text-xs text-gray-500 block mt-1">
+                                                <?= $block->escapeHtml($cost['description']) ?>
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <?= /* @noEscape */ $this->helper('Magento\Framework\Pricing\Helper\Data')->currency($cost['price'], true, false) ?>

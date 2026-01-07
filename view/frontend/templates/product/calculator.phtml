@@ -90,13 +90,16 @@ $defaultOrigin = $viewModel->getDefaultOrigin();
             <h4 class="text-sm font-semibold text-gray-900 mb-2"><?= $block->escapeHtml(__('Available Delivery Methods')) ?></h4>
             <div class="space-y-2">
                 <template x-for="(cost, index) in shippingCosts" :key="cost.method">
-                    <label class="flex items-center justify-between p-3 border rounded-md cursor-pointer hover:bg-blue-50 transition-colors"
+                    <label class="flex items-start justify-between p-3 border rounded-md cursor-pointer hover:bg-blue-50 transition-colors"
                            :class="selectedMethodIndex === index ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 bg-white'">
-                        <div class="flex items-center gap-3">
-                            <input type="radio" name="delivery_method" :value="index" x-model="selectedMethodIndex" class="text-blue-600 focus:ring-blue-500">
-                            <span class="text-sm font-medium text-gray-900" x-text="cost.method"></span>
+                        <div class="flex items-start gap-3">
+                            <input type="radio" name="delivery_method" :value="index" x-model="selectedMethodIndex" class="text-blue-600 focus:ring-blue-500 mt-1">
+                            <div>
+                                <span class="text-sm font-medium text-gray-900 block" x-text="cost.method"></span>
+                                <span class="text-xs text-gray-500 block mt-1" x-show="cost.description" x-text="cost.description"></span>
+                            </div>
                         </div>
-                        <span class="text-sm font-bold text-gray-900" x-text="cost.formatted_price"></span>
+                        <span class="text-sm font-bold text-gray-900 whitespace-nowrap" x-text="cost.formatted_price"></span>
                     </label>
                 </template>
             </div>

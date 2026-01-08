@@ -36,11 +36,28 @@ if ($product && $product->getSku() !== $targetSku) {
 
 $productPrice = 0;
 $productId = 0;
+$tierPrices = [];
+
 if ($product) {
     // Use PriceInfo to get the correct final price (including tax and rules)
     $priceInfo = $product->getPriceInfo();
     $productPrice = $priceInfo->getPrice('final_price')->getAmount()->getValue();
     $productId = $product->getId();
+
+    // Get Tier Prices
+    $tierPriceModel = $priceInfo->getPrice('tier_price');
+    if ($tierPriceModel) {
+        foreach ($tierPriceModel->getTierPriceList() as $tier) {
+            $tierPrices[] = [
+                'qty' => (float)$tier['price_qty'],
+                'price' => (float)$tier['price']->getValue()
+            ];
+        }
+    }
+    // Sort by qty ascending
+    usort($tierPrices, function($a, $b) {
+        return $a['qty'] <=> $b['qty'];
+    });
 }
 
 $defaultOrigin = $viewModel->getDefaultOrigin();
@@ -52,7 +69,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
     <div id="delivery-calculator-data"
          :data-grand-total="grandTotal"
          :data-calculated="calculated"
-         :data-product-price="<?= (float)$productPrice ?>"
+         :data-product-price="activePrice"
          style="display: none;"></div>
 
     <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -153,6 +170,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
             postcode: '<?= $escaper->escapeJs($prefilledPostcode) ?>',
             qty: 1,
             productPrice: <?= (float)$productPrice ?>,
+            tierPrices: <?= json_encode($tierPrices) ?>,
             productId: <?= (int)$productId ?>,
             isLoading: false,
             error: null,
@@ -186,8 +204,20 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                 }
             },
 
+            get activePrice() {
+                let price = this.productPrice;
+                // Find applicable tier price
+                // tierPrices is sorted ascending by qty
+                for (let i = 0; i < this.tierPrices.length; i++) {
+                    if (this.qty >= this.tierPrices[i].qty) {
+                        price = this.tierPrices[i].price;
+                    }
+                }
+                return price;
+            },
+
             get productTotal() {
-                return this.qty * this.productPrice;
+                return this.qty * this.activePrice;
             },
 
             get selectedDeliveryCost() {

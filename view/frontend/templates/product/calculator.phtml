@@ -60,7 +60,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1"><?= $block->escapeHtml(__('Destination Postcode')) ?></label>
             <div class="flex gap-2">
-                <input type="text" x-model="postcode" placeholder="e.g. 00-001"
+                <input type="text" x-model="postcode" placeholder="00-000"
                        class="form-input w-full"
                        @keydown.enter.prevent="calculate"
                 >

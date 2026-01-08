@@ -13,6 +13,8 @@ use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Api\AddressRepositoryInterface;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Store\Model\ScopeInterface;
 
 class DistanceCalculator implements ArgumentInterface
 {
@@ -26,6 +28,7 @@ class DistanceCalculator implements ArgumentInterface
     private CustomerSession $customerSession;
     private CustomerRepositoryInterface $customerRepository;
     private AddressRepositoryInterface $addressRepository;
+    private ScopeConfigInterface $scopeConfig;
 
     // Cache for distances within request to avoid duplicate API calls
     private array $distanceCache = [];
@@ -40,7 +43,8 @@ class DistanceCalculator implements ArgumentInterface
         CheckoutSession $checkoutSession,
         CustomerSession $customerSession,
         CustomerRepositoryInterface $customerRepository,
-        AddressRepositoryInterface $addressRepository
+        AddressRepositoryInterface $addressRepository,
+        ScopeConfigInterface $scopeConfig
     ) {
         $this->config = $config;
         $this->curl = $curl;
@@ -52,6 +56,7 @@ class DistanceCalculator implements ArgumentInterface
         $this->customerSession = $customerSession;
         $this->customerRepository = $customerRepository;
         $this->addressRepository = $addressRepository;
+        $this->scopeConfig = $scopeConfig;
     }
 
     public function isEnabled(): bool
@@ -62,6 +67,13 @@ class DistanceCalculator implements ArgumentInterface
     public function getDefaultOrigin(): ?string
     {
         return $this->config->getWarehouseOrigin();
+    }
+
+    public function getTargetSku(): string
+    {
+        // Assuming the target SKU is consistent across methods, we can get it from one of them.
+        // Let's take it from direct_no_lift as it's one of the new ones.
+        return $this->scopeConfig->getValue('carriers/direct_no_lift/target_sku', ScopeInterface::SCOPE_STORE) ?? 'GARDENLAWNS001';
     }
 
     /**
@@ -127,6 +139,7 @@ class DistanceCalculator implements ArgumentInterface
             $price = $this->courierShipping->calculatePrice($qty);
             if ($price > 0) {
                 $costs[] = [
+                    'code' => 'couriershipping_couriershipping',
                     'method' => __($this->courierShipping->getConfigData('name')),
                     'description' => __($this->courierShipping->getConfigData('description')),
                     'price' => $price
@@ -135,7 +148,7 @@ class DistanceCalculator implements ArgumentInterface
         }
 
         // Helper function to process Direct methods
-        $processDirectMethod = function ($method) use ($qty, $destination, $defaultOrigin, $defaultDistanceKm) {
+        $processDirectMethod = function ($method, $code) use ($qty, $destination, $defaultOrigin, $defaultDistanceKm) {
             if (!$method->getConfigFlag('active')) {
                 return null;
             }
@@ -157,6 +170,7 @@ class DistanceCalculator implements ArgumentInterface
             $price = $method->calculatePrice($distanceKm, $qty);
             if ($price > 0) {
                 return [
+                    'code' => $code . '_' . $code, // Assuming method code is same as carrier code
                     'method' => __($method->getConfigData('name')),
                     'description' => __($method->getConfigData('description')),
                     'price' => $price,
@@ -167,15 +181,15 @@ class DistanceCalculator implements ArgumentInterface
         };
 
         // 2. Direct No Lift
-        $cost = $processDirectMethod($this->directNoLift);
+        $cost = $processDirectMethod($this->directNoLift, 'direct_no_lift');
         if ($cost) $costs[] = $cost;
 
         // 3. Direct Lift
-        $cost = $processDirectMethod($this->directLift);
+        $cost = $processDirectMethod($this->directLift, 'direct_lift');
         if ($cost) $costs[] = $cost;
 
         // 4. Direct Forklift
-        $cost = $processDirectMethod($this->directForklift);
+        $cost = $processDirectMethod($this->directForklift, 'direct_forklift');
         if ($cost) $costs[] = $cost;
 
         return $costs;

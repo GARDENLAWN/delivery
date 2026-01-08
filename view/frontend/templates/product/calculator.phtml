@@ -4,10 +4,10 @@
 $viewModel = $block->getData('view_model');
 
 // Debug info
-echo '<!-- Delivery Calculator Block Loaded -->';
+// echo '<!-- Delivery Calculator Block Loaded -->';
 
 if (!$viewModel->isEnabled()) {
-    echo '<!-- Delivery Calculator Disabled via Config -->';
+    // echo '<!-- Delivery Calculator Disabled via Config -->';
     return;
 }
 
@@ -19,22 +19,13 @@ if (!$product) {
     $product = $registry->registry('current_product');
 }
 
-// Debug SKU
-if ($product) {
-    echo '<!-- Product SKU: ' . $block->escapeHtml($product->getSku()) . ' -->';
-} else {
-    echo '<!-- Product Not Found in Block -->';
-}
-
 // Check if product is eligible (e.g. by SKU or Attribute)
-$targetSku = 'GARDENLAWNS001'; // Or get from config
-// TEMPORARY: Commented out SKU check for debugging
-/*
+$targetSku = $viewModel->getTargetSku();
+
 if ($product && $product->getSku() !== $targetSku) {
-    echo '<!-- SKU Mismatch. Expected: ' . $targetSku . ' -->';
+    // echo '<!-- SKU Mismatch. Expected: ' . $targetSku . ' -->';
     return;
 }
-*/
 
 $productPrice = 0;
 $productId = 0;

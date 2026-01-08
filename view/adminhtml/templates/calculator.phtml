@@ -116,6 +116,7 @@ $exampleAddresses = [
                                 <tr>
                                     <th class="data-grid-th"><?= $block->escapeHtml(__('Method')) ?></th>
                                     <th class="data-grid-th"><?= $block->escapeHtml(__('Price')) ?></th>
+                                    <th class="data-grid-th"><?= $block->escapeHtml(__('Price per m² (Delivery Only)')) ?></th>
                                 </tr>
                             </thead>
                             <tbody id="shipping-costs-body">
@@ -185,7 +186,7 @@ $exampleAddresses = [
 </div>
 
 <script>
-    require(['jquery', 'mage/url'], function($, urlBuilder) {
+    require(['jquery', 'mage/url', 'Magento_Catalog/js/price-utils'], function($, urlBuilder, priceUtils) {
         $(document).ready(function() {
             // --- Calculator Logic ---
             $('#distance-calculator-form').on('submit', function(e) {
@@ -193,7 +194,7 @@ $exampleAddresses = [
 
                 var origin = $('#origin').val();
                 var destination = $('#destination').val();
-                var quantity = $('#quantity').val();
+                var quantity = parseFloat($('#quantity').val());
                 var $btn = $('#calculate-btn');
                 var $result = $('#calculator-result');
                 var $error = $('#calculator-error');
@@ -236,6 +237,16 @@ $exampleAddresses = [
                                     }
                                     $('<td>').html(methodText).appendTo($tr);
                                     $('<td>').css('font-weight', 'bold').text(cost.price).appendTo($tr);
+
+                                    // Calculate price per m2 (delivery cost only)
+                                    var pricePerM2 = '-';
+                                    if (cost.raw_price && quantity > 0) {
+                                        var val = cost.raw_price / quantity;
+                                        pricePerM2 = priceUtils.formatPrice(val, {}, true);
+                                    }
+
+                                    $('<td>').text(pricePerM2).appendTo($tr);
+
                                     $tbody.append($tr);
                                 });
                                 $('#result-shipping-costs').show();
@@ -263,13 +274,12 @@ $exampleAddresses = [
                 });
             });
 
+            // ... (rest of the script) ...
             // --- Example Address Dropdown Logic ---
             $('#example-address-select').on('change', function() {
                 var address = $(this).val();
                 if (address) {
                     $('#destination').val(address);
-
-                    // Visual feedback
                     $('#destination').css('background-color', '#e8f0fe');
                     setTimeout(function() {
                         $('#destination').css('background-color', '');
@@ -280,8 +290,6 @@ $exampleAddresses = [
             // --- Order Search Logic ---
             function searchOrders() {
                 var query = $('#order-search').val();
-                // Removed length check to allow empty query for recent orders
-
                 $('#search-loading').show();
                 $('#orders-grid').hide();
                 $('#no-orders-found').hide();
@@ -330,25 +338,21 @@ $exampleAddresses = [
             });
 
             $('#order-search').on('keypress', function(e) {
-                if (e.which == 13) { // Enter key
+                if (e.which == 13) {
                     e.preventDefault();
                     searchOrders();
                 }
             });
 
-            // Use Address Button Click
             $(document).on('click', '.use-address-btn', function() {
                 var address = $(this).data('address');
                 $('#destination').val(address);
-
-                // Optional: Highlight the field to show it changed
                 $('#destination').css('background-color', '#e8f0fe');
                 setTimeout(function() {
                     $('#destination').css('background-color', '');
                 }, 500);
             });
 
-            // Load recent orders on page load
             searchOrders();
         });
     });

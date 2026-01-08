@@ -4,10 +4,10 @@
 $viewModel = $block->getData('view_model');
 
 // Debug info
-// echo '<!-- Delivery Calculator Block Loaded -->';
+echo '<!-- Delivery Calculator Block Loaded -->';
 
 if (!$viewModel->isEnabled()) {
-    // echo '<!-- Delivery Calculator Disabled via Config -->';
+    echo '<!-- Delivery Calculator Disabled via Config -->';
     return;
 }
 
@@ -17,6 +17,13 @@ if (!$product) {
     $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
     $registry = $objectManager->get('Magento\Framework\Registry');
     $product = $registry->registry('current_product');
+}
+
+// Debug SKU
+if ($product) {
+    echo '<!-- Product SKU: ' . $block->escapeHtml($product->getSku()) . ' -->';
+} else {
+    echo '<!-- Product Not Found in Block -->';
 }
 
 // Check if product is eligible (e.g. by SKU or Attribute)
@@ -122,6 +129,10 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                         <span><?= $block->escapeHtml(__('Total Estimated Cost')) ?></span>
                         <span class="text-primary" x-text="formatPrice(grandTotal)"></span>
                     </div>
+                    <div class="flex justify-between text-sm text-gray-600 pt-1">
+                        <span><?= $block->escapeHtml(__('Price per m² (incl. delivery)')) ?></span>
+                        <span class="font-medium text-gray-900" x-text="formatPrice(pricePerM2)"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -195,6 +206,10 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
 
             get grandTotal() {
                 return this.productTotal + this.selectedDeliveryCost;
+            },
+
+            get pricePerM2() {
+                return this.qty > 0 ? this.grandTotal / this.qty : 0;
             },
 
             formatPrice(price) {

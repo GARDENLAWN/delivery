@@ -86,6 +86,7 @@ class Calculate extends Action
                             'method' => $cost['method'],
                             'description' => $cost['description'] ?? '',
                             'price' => $formattedPrice,
+                            'raw_price' => $cost['price'], // Add raw price for calculations
                             'distance' => isset($cost['distance']) ? round($cost['distance'], 1) . ' km' : null
                         ];
                     }

@@ -27,7 +27,7 @@ if ($product) {
 }
 
 // Check if product is eligible (e.g. by SKU or Attribute)
-$targetSku = 'trawa-w-rolce'; // Or get from config
+$targetSku = 'GARDENLAWNS001'; // Or get from config
 // TEMPORARY: Commented out SKU check for debugging
 /*
 if ($product && $product->getSku() !== $targetSku) {
@@ -39,7 +39,9 @@ if ($product && $product->getSku() !== $targetSku) {
 $productPrice = 0;
 $productId = 0;
 if ($product) {
-    $productPrice = $product->getFinalPrice();
+    // Use PriceInfo to get the correct final price (including tax and rules)
+    $priceInfo = $product->getPriceInfo();
+    $productPrice = $priceInfo->getPrice('final_price')->getAmount()->getValue();
     $productId = $product->getId();
 }
 

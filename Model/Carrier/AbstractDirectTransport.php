@@ -81,7 +81,7 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
             return false;
         }
 
-        $targetSku = strtolower($this->getConfigData('target_sku') ?? 'trawa-w-rolce');
+        $targetSku = strtolower($this->getConfigData('target_sku') ?? 'GARDENLAWNS001');
         $qnt = 0;
 
         foreach ($items as $item) {

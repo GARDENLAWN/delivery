@@ -165,7 +165,7 @@
                 </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
-                    <comment>SKU to calculate shipping for (default: trawa-w-rolce)</comment>
+                    <comment>SKU to calculate shipping for (default: GARDENLAWNS001)</comment>
                 </field>
                 <field id="prices_table" translate="label" type="textarea" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Prices Table (JSON)</label>
@@ -199,7 +199,7 @@
                 </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
-                    <comment>SKU to calculate shipping for (default: trawa-w-rolce)</comment>
+                    <comment>SKU to calculate shipping for (default: GARDENLAWNS001)</comment>
                 </field>
                 <field id="price" translate="label" type="text" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Price per KM</label>
@@ -240,7 +240,7 @@
                 </field>
                 <field id="target_sku" translate="label" type="text" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Target Product SKU</label>
-                    <comment>SKU to calculate shipping for (default: trawa-w-rolce)</comment>
+                    <comment>SKU to calculate shipping for (default: GARDENLAWNS001)</comment>
                 </field>
                 <field id="points" translate="label" type="textarea" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Intermediate Points (JSON)</label>

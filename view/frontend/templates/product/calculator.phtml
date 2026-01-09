@@ -118,11 +118,17 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                     <label class="flex items-start justify-between p-3 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
                            :class="selectedMethodIndex === index ? 'border-primary bg-blue-50 ring-1 ring-primary' : 'border-gray-200 bg-white'">
                         <div class="flex items-start gap-3">
-                            <input type="radio" name="delivery_method" :value="index" x-model="selectedMethodIndex" class="text-primary focus:ring-primary mt-1"
-                                   @change="selectMethod(index)">
-                            <div>
+                            <input type="radio" name="delivery_method" :value="index" x-model="selectedMethodIndex" class="text-primary focus:ring-primary mt-1">
+                            <div class="w-full">
                                 <span class="text-sm font-medium text-gray-900 block" x-text="cost.method"></span>
                                 <span class="text-xs text-gray-500 block mt-1" x-show="cost.description" x-text="cost.description"></span>
+
+                                <!-- Promotion Message -->
+                                <div x-show="cost.promotion_message" class="mt-2 p-2 text-xs rounded"
+                                     style="border: 1px solid #fcd34d; background-color: #fffbeb; color: #92400e;">
+                                    <strong class="block mb-1"><?= $block->escapeHtml(__('Special Offer:')) ?></strong>
+                                    <span x-html="cost.promotion_message"></span>
+                                </div>
                             </div>
                         </div>
                         <span class="text-sm font-bold text-gray-900 whitespace-nowrap" x-text="cost.formatted_price"></span>
@@ -272,7 +278,8 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                     },
                     body: new URLSearchParams({
                         'destination': this.postcode + ', PL', // Assuming Poland for now
-                        'qty': this.qty
+                        'qty': this.qty,
+                        'product_id': this.productId
                     })
                 })
                 .then(response => response.json())
@@ -283,9 +290,9 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                         this.shippingCosts = data.shipping_costs;
                         this.calculated = true;
 
-                        // Auto-select first method and save it
+                        // Auto-select first method
                         if (this.shippingCosts.length > 0) {
-                            this.selectMethod(0);
+                            this.selectedMethodIndex = 0;
                         }
                     } else {
                         this.error = data.message || '<?= $block->escapeJs(__('Error calculating delivery.')) ?>';
@@ -297,45 +304,6 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                 .finally(() => {
                     this.isLoading = false;
                 });
-            },
-
-            selectMethod(index) {
-                this.selectedMethodIndex = index;
-                const method = this.shippingCosts[index];
-
-                if (!method || !method.code) return;
-
-                // Save selected method to quote
-                fetch('<?= $block->getUrl('delivery/calculator/save') ?>', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: new URLSearchParams({
-                        'method': method.code,
-                        'postcode': this.postcode,
-                        'country_id': 'PL'
-                    })
-                }).then(response => response.json())
-                  .then(data => {
-                      if (data.success) {
-                          // Optional: Show success message or update mini-cart if needed
-                          // But since we are on product page, main goal is to have it ready for cart
-
-                          // Also update local storage for cart page to pick it up
-                          const browserStorage = hyva.getBrowserStorage();
-                          const sectionData = JSON.parse(browserStorage.getItem('mage-cache-storage')) || {};
-
-                          if (!sectionData['cart-data']) sectionData['cart-data'] = {};
-                          if (!sectionData['cart-data'].address) sectionData['cart-data'].address = {};
-
-                          sectionData['cart-data'].address.postcode = this.postcode;
-                          sectionData['cart-data'].address.countryId = 'PL';
-
-                          browserStorage.setItem('mage-cache-storage', JSON.stringify(sectionData));
-                      }
-                  });
             }
         }
     }

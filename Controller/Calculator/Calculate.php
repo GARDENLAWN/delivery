@@ -9,6 +9,7 @@ use GardenLawn\Delivery\ViewModel\DistanceCalculator;
 use Magento\Framework\App\CsrfAwareActionInterface;
 use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\App\RequestInterface;
+use Magento\Catalog\Api\ProductRepositoryInterface;
 
 class Calculate implements HttpPostActionInterface, CsrfAwareActionInterface
 {
@@ -16,18 +17,21 @@ class Calculate implements HttpPostActionInterface, CsrfAwareActionInterface
     private DistanceCalculator $distanceCalculator;
     private \Magento\Framework\Pricing\Helper\Data $pricingHelper;
     private RequestInterface $request;
+    private ProductRepositoryInterface $productRepository;
 
     public function __construct(
         Context $context,
         JsonFactory $resultJsonFactory,
         DistanceCalculator $distanceCalculator,
         \Magento\Framework\Pricing\Helper\Data $pricingHelper,
-        RequestInterface $request
+        RequestInterface $request,
+        ProductRepositoryInterface $productRepository
     ) {
         $this->resultJsonFactory = $resultJsonFactory;
         $this->distanceCalculator = $distanceCalculator;
         $this->pricingHelper = $pricingHelper;
         $this->request = $request;
+        $this->productRepository = $productRepository;
     }
 
     public function execute()
@@ -43,6 +47,7 @@ class Calculate implements HttpPostActionInterface, CsrfAwareActionInterface
 
         $destination = $this->request->getParam('destination');
         $qty = (float)$this->request->getParam('qty', 0);
+        $productId = $this->request->getParam('product_id');
 
         // Origin is handled by ViewModel (default or specific per method)
         $origin = $this->distanceCalculator->getDefaultOrigin();
@@ -72,18 +77,40 @@ class Calculate implements HttpPostActionInterface, CsrfAwareActionInterface
                 $distanceValue = $element['distance']['value']; // meters
                 $distanceKm = $distanceValue / 1000;
 
+                // Load product if ID is provided
+                $product = null;
+                if ($productId) {
+                    try {
+                        $product = $this->productRepository->getById($productId);
+                    } catch (\Exception $e) {
+                        // Product not found, continue without promotions
+                    }
+                }
+
+                // Extract postcode from destination (assuming format "POSTCODE, COUNTRY" or just "POSTCODE")
+                $postcode = explode(',', $destination)[0];
+                $postcode = trim($postcode);
+
                 // Calculate shipping costs
                 $shippingCosts = [];
                 if ($qty > 0) {
                     $rawCosts = $this->distanceCalculator->calculateShippingCosts($distanceKm, $qty, $destination);
 
                     foreach ($rawCosts as $cost) {
+                        $promotionMessage = null;
+                        if ($product) {
+                            // Pass product, method code, qty (ignored but passed), and postcode
+                            $promotionMessage = $this->distanceCalculator->getPromotionMessage($product, $cost['code'], $qty, $postcode);
+                        }
+
                         $shippingCosts[] = [
+                            'code' => $cost['code'], // Ensure code is passed
                             'method' => $cost['method'],
                             'description' => $cost['description'] ?? '',
                             'price' => $cost['price'],
                             'formatted_price' => $this->pricingHelper->currency($cost['price'], true, false),
-                            'distance' => isset($cost['distance']) ? round($cost['distance'], 1) . ' km' : null
+                            'distance' => isset($cost['distance']) ? round($cost['distance'], 1) . ' km' : null,
+                            'promotion_message' => $promotionMessage
                         ];
                     }
                 }

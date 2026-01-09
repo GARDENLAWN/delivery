@@ -15,6 +15,11 @@ use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Api\AddressRepositoryInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Store\Model\ScopeInterface;
+use Magento\SalesRule\Model\ResourceModel\Rule\CollectionFactory as RuleCollectionFactory;
+use Magento\Quote\Model\Quote\AddressFactory;
+use Magento\Quote\Model\Quote\ItemFactory;
+use Magento\Quote\Model\QuoteFactory;
+use Magento\Store\Model\StoreManagerInterface;
 
 class DistanceCalculator implements ArgumentInterface
 {
@@ -29,6 +34,11 @@ class DistanceCalculator implements ArgumentInterface
     private CustomerRepositoryInterface $customerRepository;
     private AddressRepositoryInterface $addressRepository;
     private ScopeConfigInterface $scopeConfig;
+    private RuleCollectionFactory $ruleCollectionFactory;
+    private AddressFactory $addressFactory;
+    private ItemFactory $itemFactory;
+    private QuoteFactory $quoteFactory;
+    private StoreManagerInterface $storeManager;
 
     // Cache for distances within request to avoid duplicate API calls
     private array $distanceCache = [];
@@ -44,7 +54,12 @@ class DistanceCalculator implements ArgumentInterface
         CustomerSession $customerSession,
         CustomerRepositoryInterface $customerRepository,
         AddressRepositoryInterface $addressRepository,
-        ScopeConfigInterface $scopeConfig
+        ScopeConfigInterface $scopeConfig,
+        RuleCollectionFactory $ruleCollectionFactory,
+        AddressFactory $addressFactory,
+        ItemFactory $itemFactory,
+        QuoteFactory $quoteFactory,
+        StoreManagerInterface $storeManager
     ) {
         $this->config = $config;
         $this->curl = $curl;
@@ -57,6 +72,11 @@ class DistanceCalculator implements ArgumentInterface
         $this->customerRepository = $customerRepository;
         $this->addressRepository = $addressRepository;
         $this->scopeConfig = $scopeConfig;
+        $this->ruleCollectionFactory = $ruleCollectionFactory;
+        $this->addressFactory = $addressFactory;
+        $this->itemFactory = $itemFactory;
+        $this->quoteFactory = $quoteFactory;
+        $this->storeManager = $storeManager;
     }
 
     public function isEnabled(): bool
@@ -71,17 +91,11 @@ class DistanceCalculator implements ArgumentInterface
 
     public function getTargetSku(): string
     {
-        // Assuming the target SKU is consistent across methods, we can get it from one of them.
-        // Let's take it from direct_no_lift as it's one of the new ones.
         return $this->scopeConfig->getValue('carriers/direct_no_lift/target_sku', ScopeInterface::SCOPE_STORE) ?? 'GARDENLAWNS001';
     }
 
-    /**
-     * Try to get postcode from Quote or Customer Session
-     */
     public function getCustomerPostcode(): ?string
     {
-        // 1. Try Quote Address
         try {
             $quote = $this->checkoutSession->getQuote();
             $shippingAddress = $quote->getShippingAddress();
@@ -91,10 +105,8 @@ class DistanceCalculator implements ArgumentInterface
                 return $postcode;
             }
         } catch (\Exception $e) {
-            // Quote might not exist or be accessible
         }
 
-        // 2. Try Customer Default Shipping Address
         if ($this->customerSession->isLoggedIn()) {
             try {
                 $customerId = $this->customerSession->getCustomerId();
@@ -106,7 +118,6 @@ class DistanceCalculator implements ArgumentInterface
                     return $address->getPostcode();
                 }
             } catch (\Exception $e) {
-                // Customer or address might not exist
             }
         }
 
@@ -134,7 +145,6 @@ class DistanceCalculator implements ArgumentInterface
         $costs = [];
         $defaultOrigin = $this->getDefaultOrigin();
 
-        // 1. Courier Shipping (Pallet) - Distance independent (usually)
         if ($this->courierShipping->getConfigFlag('active')) {
             $price = $this->courierShipping->calculatePrice($qty);
             if ($price > 0) {
@@ -147,7 +157,6 @@ class DistanceCalculator implements ArgumentInterface
             }
         }
 
-        // Helper function to process Direct methods
         $processDirectMethod = function ($method, $code) use ($qty, $destination, $defaultOrigin, $defaultDistanceKm) {
             if (!$method->getConfigFlag('active')) {
                 return null;
@@ -156,13 +165,11 @@ class DistanceCalculator implements ArgumentInterface
             $methodOrigin = $method->getOrigin();
             $distanceKm = $defaultDistanceKm;
 
-            // If method has a specific origin different from default, recalculate distance
             if ($methodOrigin && $methodOrigin !== $defaultOrigin) {
                 $result = $this->getDistance($methodOrigin, $destination);
                 if (isset($result['element']['distance']['value'])) {
                     $distanceKm = $result['element']['distance']['value'] / 1000;
                 } else {
-                    // If distance calculation fails for specific origin, skip this method
                     return null;
                 }
             }
@@ -170,29 +177,170 @@ class DistanceCalculator implements ArgumentInterface
             $price = $method->calculatePrice($distanceKm, $qty);
             if ($price > 0) {
                 return [
-                    'code' => $code . '_' . $code, // Assuming method code is same as carrier code
+                    'code' => $code . '_' . $code,
                     'method' => __($method->getConfigData('name')),
                     'description' => __($method->getConfigData('description')),
                     'price' => $price,
-                    'distance' => $distanceKm // Optional: return specific distance for debug/info
+                    'distance' => $distanceKm
                 ];
             }
             return null;
         };
 
-        // 2. Direct No Lift
         $cost = $processDirectMethod($this->directNoLift, 'direct_no_lift');
         if ($cost) $costs[] = $cost;
 
-        // 3. Direct Lift
         $cost = $processDirectMethod($this->directLift, 'direct_lift');
         if ($cost) $costs[] = $cost;
 
-        // 4. Direct Forklift
         $cost = $processDirectMethod($this->directForklift, 'direct_forklift');
         if ($cost) $costs[] = $cost;
 
         return $costs;
+    }
+
+    public function getPromotionMessage(\Magento\Catalog\Model\Product $product, string $methodCode, float $qty = 1, string $postcode = null): ?string
+    {
+        try {
+            $websiteId = $this->storeManager->getStore()->getWebsiteId();
+            $customerGroupId = $this->customerSession->getCustomerGroupId();
+
+            $rules = $this->ruleCollectionFactory->create()
+                ->setValidationFilter($websiteId, $customerGroupId)
+                ->addFieldToFilter('is_active', 1)
+                ->addFieldToFilter('coupon_type', \Magento\SalesRule\Model\Rule::COUPON_TYPE_NO_COUPON);
+
+            if ($rules->getSize() === 0) {
+                return null;
+            }
+
+            // Use a standard quantity of 1 for validation after removing qty conditions
+            $validationQty = 1;
+            $price = $product->getPriceInfo()->getPrice('final_price')->getAmount()->getValue();
+            $rowTotal = $price * $validationQty;
+
+            /** @var \Magento\Quote\Model\Quote\Address $address */
+            $address = $this->addressFactory->create();
+            $address->setShippingMethod($methodCode);
+            $address->setCountryId('PL');
+            if ($postcode) {
+                $address->setPostcode($postcode);
+            }
+
+            /** @var \Magento\Quote\Model\Quote\Item $item */
+            $item = $this->itemFactory->create();
+            $item->setProduct($product);
+            $item->setQty($validationQty);
+            $item->setPrice($price);
+            $item->setBasePrice($price);
+            $item->setRowTotal($rowTotal);
+            $item->setBaseRowTotal($rowTotal);
+            $item->setAddress($address);
+
+            // Create mock quote and attach to item and address
+            $quote = $this->quoteFactory->create();
+            $quote->setStoreId($this->storeManager->getStore()->getId());
+            $item->setQuote($quote);
+
+            $address->addItem($item);
+            $address->setTotalQty($validationQty);
+            $address->setBaseSubtotal($rowTotal);
+            $address->setSubtotal($rowTotal);
+            $address->setBaseGrandTotal($rowTotal);
+            $address->setGrandTotal($rowTotal);
+            $address->setCollectShippingRates(true);
+
+            // Attach address to quote
+            $quote->setShippingAddress($address);
+            $quote->setBillingAddress($address);
+
+            // Force items collection on address to include our item
+            // This is the fix for "Address Items Count: 0"
+            // When using a new address object, getAllItems might return empty if not properly initialized
+            // or if it tries to load from quote which is empty.
+            // By setting the cached items directly, we ensure getAllItems returns our item.
+            $address->setData('all_items', [$item]);
+            $address->setData('cached_items_all', [$item]);
+
+            $messages = [];
+
+            foreach ($rules as $rule) {
+                $rule->afterLoad();
+
+                // Extract qty requirement BEFORE removing conditions
+                $qtyRequirement = $this->extractQtyRequirement($rule->getConditions());
+
+                // Remove quantity conditions to check applicability regardless of qty
+                $this->removeQtyConditions($rule->getConditions());
+
+                if (method_exists($address, 'setQuote')) {
+                    $address->setQuote($quote);
+                }
+
+                if ($rule->validate($address)) {
+                    $message = $rule->getDescription() ?: $rule->getName();
+                    if ($qtyRequirement) {
+                        $message .= ' (' . __('min. %1 m²', $qtyRequirement) . ')';
+                    }
+                    $messages[] = $message;
+                }
+            }
+
+            if (!empty($messages)) {
+                return implode('<br>', $messages);
+            }
+
+        } catch (\Exception $e) {
+            return "Error: " . $e->getMessage();
+        }
+
+        return null;
+    }
+
+    /**
+     * Recursively remove total_qty conditions from the rule
+     *
+     * @param \Magento\Rule\Model\Condition\Combine $combine
+     */
+    private function removeQtyConditions($combine)
+    {
+        $conditions = $combine->getConditions();
+        $newConditions = [];
+        foreach ($conditions as $condition) {
+            if ($condition instanceof \Magento\SalesRule\Model\Rule\Condition\Combine) {
+                $this->removeQtyConditions($condition);
+                $newConditions[] = $condition;
+            } elseif ($condition instanceof \Magento\SalesRule\Model\Rule\Condition\Address) {
+                // Remove Total Items Quantity condition
+                if ($condition->getAttribute() !== 'total_qty') {
+                    $newConditions[] = $condition;
+                }
+            } else {
+                $newConditions[] = $condition;
+            }
+        }
+        $combine->setConditions($newConditions);
+    }
+
+    /**
+     * Extract required quantity from rule conditions
+     *
+     * @param \Magento\Rule\Model\Condition\Combine $combine
+     * @return float|null
+     */
+    private function extractQtyRequirement($combine)
+    {
+        foreach ($combine->getConditions() as $condition) {
+            if ($condition instanceof \Magento\SalesRule\Model\Rule\Condition\Combine) {
+                $qty = $this->extractQtyRequirement($condition);
+                if ($qty) return $qty;
+            } elseif ($condition instanceof \Magento\SalesRule\Model\Rule\Condition\Address) {
+                if ($condition->getAttribute() === 'total_qty') {
+                    return (float)$condition->getValue();
+                }
+            }
+        }
+        return null;
     }
 
     private function getGoogleDistance(string $origin, string $destination): ?array
@@ -208,7 +356,6 @@ class DistanceCalculator implements ArgumentInterface
             . "&key=" . $apiKey;
 
         try {
-            // Use a new Curl instance to avoid state issues
             $curl = new \Magento\Framework\HTTP\Client\Curl();
             $curl->get($url);
             $responseBody = $curl->getBody();
@@ -216,8 +363,6 @@ class DistanceCalculator implements ArgumentInterface
 
             if (isset($result['rows'][0]['elements'][0]['distance'])) {
                 $element = $result['rows'][0]['elements'][0];
-
-                // Calculate Times
                 $durationSeconds = $element['duration']['value'];
                 $departureTime = new \DateTime();
                 $arrivalTime = (clone $departureTime)->modify("+{$durationSeconds} seconds");
@@ -233,7 +378,6 @@ class DistanceCalculator implements ArgumentInterface
                 ];
             }
 
-            // Return error from Google if available
             if (isset($result['error_message'])) {
                 return ['error' => $result['error_message'], 'raw_json' => $responseBody];
             }
@@ -254,19 +398,16 @@ class DistanceCalculator implements ArgumentInterface
         }
 
         try {
-            // 1. Geocode Origin
             $originCoords = $this->getHereCoordinates($origin, $apiKey);
             if (isset($originCoords['error'])) {
                 return ['error' => 'Origin Geocoding Error: ' . $originCoords['error']];
             }
 
-            // 2. Geocode Destination
             $destCoords = $this->getHereCoordinates($destination, $apiKey);
             if (isset($destCoords['error'])) {
                 return ['error' => 'Destination Geocoding Error: ' . $destCoords['error']];
             }
 
-            // 3. Build Route URL with Truck Parameters
             $params = [
                 'transportMode' => 'truck',
                 'origin' => $originCoords['lat'] . "," . $originCoords['lng'],
@@ -277,7 +418,6 @@ class DistanceCalculator implements ArgumentInterface
 
             $truckParams = $this->config->getTruckParameters();
 
-            // Convert meters to centimeters for HERE API (must be integer)
             if (!empty($truckParams['height'])) {
                 $params['vehicle[height]'] = (int)($truckParams['height'] * 100);
             }
@@ -287,8 +427,6 @@ class DistanceCalculator implements ArgumentInterface
             if (!empty($truckParams['length'])) {
                 $params['vehicle[length]'] = (int)($truckParams['length'] * 100);
             }
-
-            // Weights are already in kg, which is correct
             if (!empty($truckParams['grossWeight'])) {
                 $params['vehicle[grossWeight]'] = (int)$truckParams['grossWeight'];
             }
@@ -298,7 +436,6 @@ class DistanceCalculator implements ArgumentInterface
             if (!empty($truckParams['axleCount'])) {
                 $params['vehicle[axleCount]'] = (int)$truckParams['axleCount'];
             }
-
             if (!empty($truckParams['hazardousGoods'])) {
                 $params['shippedHazardousGoods'] = $truckParams['hazardousGoods'];
             }
@@ -306,13 +443,11 @@ class DistanceCalculator implements ArgumentInterface
                 $params['avoid[features]'] = $truckParams['avoid'];
             }
 
-            // Custom query building to handle brackets and commas correctly for HERE API
             $queryString = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
             $queryString = str_replace(['%2C', '%5B', '%5D'], [',', '[', ']'], $queryString);
 
             $url = "https://router.hereapi.com/v8/routes?" . $queryString;
 
-            // Use a fresh Curl instance for the route request to ensure clean state
             $curl = new \Magento\Framework\HTTP\Client\Curl();
             $curl->get($url);
             $responseBody = $curl->getBody();
@@ -320,12 +455,8 @@ class DistanceCalculator implements ArgumentInterface
 
             if (isset($result['routes'][0]['sections'][0]['summary'])) {
                 $summary = $result['routes'][0]['sections'][0]['summary'];
-
-                // Convert meters to km and seconds to readable format
                 $distanceText = round($summary['length'] / 1000, 1) . ' km';
                 $durationText = round($summary['duration'] / 60) . ' mins';
-
-                // Calculate Times
                 $durationSeconds = $summary['duration'];
                 $departureTime = new \DateTime();
                 $arrivalTime = (clone $departureTime)->modify("+{$durationSeconds} seconds");
@@ -341,7 +472,6 @@ class DistanceCalculator implements ArgumentInterface
                 ];
             }
 
-            // Handle HERE API Errors
             if (isset($result['title'])) {
                 return ['error' => $result['title'] . (isset($result['cause']) ? ': ' . $result['cause'] : ''), 'raw_json' => $responseBody];
             }

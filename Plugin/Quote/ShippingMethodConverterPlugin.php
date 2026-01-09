@@ -21,9 +21,6 @@ class ShippingMethodConverterPlugin
     private StoreManagerInterface $storeManager;
     private CustomerSession $customerSession;
 
-    // Cache rules per request to avoid reloading for every shipping method
-    private $rulesCache = null;
-
     public function __construct(
         ShippingMethodExtensionFactory $extensionFactory,
         ScopeConfigInterface $scopeConfig,
@@ -119,24 +116,21 @@ class ShippingMethodConverterPlugin
 
     private function getPromotionMessages($address)
     {
-        if ($this->rulesCache === null) {
-            $websiteId = $this->storeManager->getStore()->getWebsiteId();
-            $customerGroupId = $this->customerSession->getCustomerGroupId();
+        $websiteId = $this->storeManager->getStore()->getWebsiteId();
+        $customerGroupId = $this->customerSession->getCustomerGroupId();
 
-            $rules = $this->ruleCollectionFactory->create()
-                ->setValidationFilter($websiteId, $customerGroupId)
-                ->addFieldToFilter('is_active', 1)
-                ->addFieldToFilter('coupon_type', Rule::COUPON_TYPE_NO_COUPON);
+        // Always load fresh rules collection to avoid side effects of modification (removing conditions)
+        $rules = $this->ruleCollectionFactory->create()
+            ->setValidationFilter($websiteId, $customerGroupId)
+            ->addFieldToFilter('is_active', 1)
+            ->addFieldToFilter('coupon_type', Rule::COUPON_TYPE_NO_COUPON);
 
-            foreach ($rules as $rule) {
-                $rule->afterLoad();
-            }
-
-            $this->rulesCache = $rules;
+        foreach ($rules as $rule) {
+            $rule->afterLoad();
         }
 
         $messages = [];
-        foreach ($this->rulesCache as $rule) {
+        foreach ($rules as $rule) {
             // Extract qty requirement
             $qtyRequirement = $this->extractQtyRequirement($rule->getConditions());
 
@@ -146,7 +140,7 @@ class ShippingMethodConverterPlugin
             if ($rule->validate($address)) {
                 $message = $rule->getDescription() ?: $rule->getName();
                 if ($qtyRequirement) {
-                    $message .= ' (' . __('min. %1 m²', $qtyRequirement) . ')';
+                    $message .= ' (' . __('buy: %1 m²', $qtyRequirement) . ')';
                 }
                 $messages[] = $message;
             }

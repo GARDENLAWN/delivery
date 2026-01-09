@@ -255,10 +255,6 @@ class DistanceCalculator implements ArgumentInterface
             $quote->setBillingAddress($address);
 
             // Force items collection on address to include our item
-            // This is the fix for "Address Items Count: 0"
-            // When using a new address object, getAllItems might return empty if not properly initialized
-            // or if it tries to load from quote which is empty.
-            // By setting the cached items directly, we ensure getAllItems returns our item.
             $address->setData('all_items', [$item]);
             $address->setData('cached_items_all', [$item]);
 
@@ -280,7 +276,7 @@ class DistanceCalculator implements ArgumentInterface
                 if ($rule->validate($address)) {
                     $message = $rule->getDescription() ?: $rule->getName();
                     if ($qtyRequirement) {
-                        $message .= ' (' . __('min. %1 m²', $qtyRequirement) . ')';
+                        $message .= ' (' . __('buy: %1 m²', $qtyRequirement) . ')';
                     }
                     $messages[] = $message;
                 }

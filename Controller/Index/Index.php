@@ -4,46 +4,18 @@ namespace GardenLawn\Delivery\Controller\Index;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\Controller\ResultFactory;
-use GardenLawn\Delivery\Model\TransEu\AuthService;
 
 class Index extends Action
 {
-    protected $authService;
-
     public function __construct(
-        Context $context,
-        AuthService $authService
+        Context $context
     ) {
         parent::__construct($context);
-        $this->authService = $authService;
     }
 
     public function execute()
     {
-        $code = $this->getRequest()->getParam('code');
-        $error = $this->getRequest()->getParam('error');
-
-        if ($error) {
-            $this->messageManager->addErrorMessage(__('Trans.eu authorization failed: %1', $error));
-        } elseif ($code) {
-            try {
-                $this->authService->handleCallback($code);
-                $this->messageManager->addSuccessMessage(__('Trans.eu authorization successful.'));
-            } catch (\Exception $e) {
-                $this->messageManager->addErrorMessage(__('Error during token exchange: %1', $e->getMessage()));
-            }
-        } else {
-            // If accessed directly without code/error, maybe redirect or show error
-             $this->messageManager->addErrorMessage(__('Invalid callback request.'));
-        }
-
-        // Redirect back to admin config
         $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
-        // We need to find the correct admin URL. Since this is frontend controller, we can't easily generate admin URL securely without knowing the admin path/key.
-        // However, usually the user initiating this is the admin in another tab.
-        // A simple "Authorization complete, you can close this window" page might be better, or redirect to home.
-
-        // For now, let's redirect to home page with the message.
         $resultRedirect->setPath('/');
         return $resultRedirect;
     }

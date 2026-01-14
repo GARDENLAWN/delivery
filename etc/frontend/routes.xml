@@ -4,8 +4,5 @@
         <route id="gardenlawn_delivery" frontName="delivery">
             <module name="GardenLawn_Delivery"/>
         </route>
-        <route id="trans_eu" frontName="trans_eu">
-            <module name="GardenLawn_Delivery"/>
-        </route>
     </router>
 </config>

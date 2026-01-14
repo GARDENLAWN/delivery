@@ -44,6 +44,43 @@
                 </field>
             </group>
 
+            <group id="trans_eu" translate="label" type="text" sortOrder="25" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Trans.eu Integration</label>
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="client_id" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Client ID</label>
+                </field>
+                <field id="client_secret" translate="label" type="obscure" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Client Secret</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="api_key" translate="label" type="obscure" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                </field>
+                <field id="trans_id" translate="label" type="text" sortOrder="45" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>TransId</label>
+                    <comment>Your Trans.eu ID (e.g. 1242549-1)</comment>
+                </field>
+                <field id="auth_url" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Auth URL</label>
+                </field>
+                <field id="api_url" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API URL</label>
+                </field>
+                <field id="redirect_uri" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Redirect URI</label>
+                    <comment>Must match the URI registered in Trans.eu application settings.</comment>
+                </field>
+                <field id="authorize_btn" translate="label" type="button" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Authorize</label>
+                    <frontend_model>GardenLawn\Delivery\Block\Adminhtml\System\Config\TransEuAuth</frontend_model>
+                </field>
+            </group>
+
             <group id="truck_settings" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Truck Parameters (HERE API)</label>
                 <depends>

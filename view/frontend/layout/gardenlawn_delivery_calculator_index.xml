@@ -1,8 +1,11 @@
 <?xml version="1.0"?>
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" layout="1column" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <title>Delivery Calculator</title>
+    </head>
     <body>
         <referenceContainer name="content">
-            <block class="Magento\Framework\View\Element\Template" name="gardenlawn.delivery.calculator" template="GardenLawn_Delivery::calculator.phtml">
+            <block class="Magento\Framework\View\Element\Template" name="delivery.calculator" template="GardenLawn_Delivery::calculator.phtml">
                 <arguments>
                     <argument name="view_model" xsi:type="object">GardenLawn\Delivery\ViewModel\DistanceCalculator</argument>
                 </arguments>

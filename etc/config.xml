@@ -9,6 +9,16 @@
             <api_provider>
                 <provider>here</provider>
             </api_provider>
+            <trans_eu>
+                <active>1</active>
+                <client_id>a969f839-b95d-4877-8150-ccbc841510a6</client_id>
+                <client_secret>7W0cLZ7ZePZfLBneHkqIEmAsScE12I8s</client_secret>
+                <api_key>5d7a5d98b726a400012bbb8a279eb257fd424f49942f713c381e674e</api_key>
+                <auth_url>https://auth.platform.trans.eu</auth_url>
+                <api_url>https://api.platform.trans.eu</api_url>
+                <redirect_uri>https://gardenlawn.pl/trans_eu</redirect_uri>
+                <trans_id>1242549-1</trans_id>
+            </trans_eu>
             <truck_settings>
                 <vehicle_height>4.0</vehicle_height>
                 <vehicle_width>2.55</vehicle_width>

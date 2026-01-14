@@ -1,0 +1,165 @@
+<?php
+/** @var \GardenLawn\Delivery\Block\Adminhtml\Test\Index $block */
+?>
+<div class="page-main-actions">
+    <div class="page-actions-placeholder"></div>
+    <div class="page-actions" data-ui-id="page-actions-toolbar-content-header">
+        <div class="page-actions-inner" data-title="Trans.eu API Test">
+            <div class="page-actions-buttons">
+                <button id="refresh_test" title="Refresh Test" type="button" class="action-default scalable primary" onclick="location.reload();">
+                    <span>Refresh Test</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="entry-edit form-inline">
+    <fieldset class="fieldset admin__fieldset" id="trans_eu_config">
+        <legend class="admin__legend legend">
+            <span>Configuration Check</span>
+        </legend>
+        <br>
+        <div class="admin__field">
+            <div class="admin__field-control" style="width: 100%">
+                <table class="data-grid">
+                    <thead>
+                        <tr>
+                            <th class="data-grid-th">Setting</th>
+                            <th class="data-grid-th">Path</th>
+                            <th class="data-grid-th">Status</th>
+                            <th class="data-grid-th">Value (Masked)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($block->getConfigData() as $path => $label): ?>
+                            <?php
+                                $value = $block->getConfigValue($path);
+                                $statusClass = !empty($value) ? 'grid-severity-notice' : 'grid-severity-critical';
+                                $statusLabel = !empty($value) ? 'OK' : 'MISSING';
+
+                                $displayValue = '-';
+                                if (!empty($value)) {
+                                    if (strpos($path, 'secret') !== false || strpos($path, 'api_key') !== false) {
+                                        $displayValue = '********' . substr($value, -4);
+                                    } elseif (strlen($value) > 20) {
+                                        $displayValue = substr($value, 0, 10) . '...' . substr($value, -5);
+                                    } else {
+                                        $displayValue = $value;
+                                    }
+                                }
+                            ?>
+                            <tr>
+                                <td><?= $block->escapeHtml($label) ?></td>
+                                <td><small><?= $block->escapeHtml($path) ?></small></td>
+                                <td><span class="<?= $statusClass ?>"><span><?= $statusLabel ?></span></span></td>
+                                <td><?= $block->escapeHtml($displayValue) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="fieldset admin__fieldset" id="trans_eu_tokens">
+        <legend class="admin__legend legend">
+            <span>Stored Tokens</span>
+        </legend>
+        <br>
+        <div class="admin__field">
+            <div class="admin__field-control" style="width: 100%">
+                <?php
+                    $tokens = $block->getTokenInfo();
+                    $accessToken = $tokens['access_token'];
+                    $refreshToken = $tokens['refresh_token'];
+                    $expiresAt = $tokens['expires_at'];
+                ?>
+                <table class="data-grid">
+                    <thead>
+                        <tr>
+                            <th class="data-grid-th">Token Type</th>
+                            <th class="data-grid-th">Status</th>
+                            <th class="data-grid-th">Value (Masked)</th>
+                            <th class="data-grid-th">Expires</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Access Token</td>
+                            <td>
+                                <span class="<?= !empty($accessToken) ? 'grid-severity-notice' : 'grid-severity-critical' ?>">
+                                    <span><?= !empty($accessToken) ? 'Present' : 'Missing' ?></span>
+                                </span>
+                            </td>
+                            <td><?= $accessToken ? substr($accessToken, 0, 10) . '...' : '-' ?></td>
+                            <td>
+                                <?php if ($expiresAt): ?>
+                                    <?= date('Y-m-d H:i:s', $expiresAt) ?>
+                                    <?php $timeLeft = $expiresAt - time(); ?>
+                                    <?php if ($timeLeft > 0): ?>
+                                        <span style="color: green; font-weight: bold;">(Valid for <?= floor($timeLeft / 60) ?> min)</span>
+                                    <?php else: ?>
+                                        <span style="color: red; font-weight: bold;">(Expired)</span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    -
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Refresh Token</td>
+                            <td>
+                                <span class="<?= !empty($refreshToken) ? 'grid-severity-notice' : 'grid-severity-critical' ?>">
+                                    <span><?= !empty($refreshToken) ? 'Present' : 'Missing' ?></span>
+                                </span>
+                            </td>
+                            <td><?= $refreshToken ? substr($refreshToken, 0, 10) . '...' : '-' ?></td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="fieldset admin__fieldset" id="trans_eu_test_process">
+        <legend class="admin__legend legend">
+            <span>Live Token Retrieval Test</span>
+        </legend>
+        <br>
+        <div class="admin__field">
+            <div class="admin__field-control" style="width: 100%">
+                <?php $testResult = $block->testTokenRetrieval(); ?>
+
+                <?php if ($testResult['success']): ?>
+                    <div class="messages">
+                        <div class="message message-success success">
+                            <div>
+                                <strong>SUCCESS!</strong> <?= $block->escapeHtml($testResult['message']) ?><br>
+                                Duration: <?= $testResult['duration'] ?>s<br>
+                                Token: <code><?= substr($testResult['token'], 0, 20) ?>...</code>
+                            </div>
+                        </div>
+                    </div>
+                    <?php if ($testResult['token'] !== $accessToken && !empty($accessToken)): ?>
+                        <div class="message message-notice notice">
+                            <div>Note: Token was automatically refreshed during this call.</div>
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div class="messages">
+                        <div class="message message-error error">
+                            <div>
+                                <strong>FAILED!</strong> <?= $block->escapeHtml($testResult['message']) ?>
+                                <?php if (isset($testResult['trace'])): ?>
+                                    <br><pre><?= $block->escapeHtml($testResult['trace']) ?></pre>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </fieldset>
+</div>

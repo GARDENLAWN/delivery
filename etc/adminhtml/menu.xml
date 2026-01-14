@@ -8,5 +8,13 @@
              parent="Magento_Sales::sales_operation"
              action="gardenlawn_delivery/calculator/index"
              resource="GardenLawn_Delivery::calculator"/>
+
+        <add id="GardenLawn_Delivery::trans_eu_test"
+             title="Trans.eu API Test"
+             module="GardenLawn_Delivery"
+             sortOrder="60"
+             parent="Magento_Sales::sales_operation"
+             action="gardenlawn_delivery/test/index"
+             resource="GardenLawn_Delivery::config"/>
     </menu>
 </config>

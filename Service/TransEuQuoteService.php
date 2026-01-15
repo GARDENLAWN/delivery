@@ -62,6 +62,20 @@ class TransEuQuoteService
 
             $vehicleBody = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_body');
             $vehicleSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
+            $freightType = $this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl';
+            $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';
+            $priceFactor = (float)$this->scopeConfig->getValue($configPath . 'transeu_price_factor');
+
+            // Default factor to 1.2 if not set or invalid
+            if ($priceFactor <= 0) {
+                $priceFactor = 1.2;
+            }
+
+            // Handle multiselect for vehicle body
+            $requiredTruckBodies = [];
+            if ($vehicleBody) {
+                $requiredTruckBodies = explode(',', $vehicleBody);
+            }
 
             // Calculate capacity based on weight
             $weightPerUnit = 25.0; // Default 25kg per m2
@@ -76,14 +90,14 @@ class TransEuQuoteService
             }
 
             $totalWeightKg = $qty * $weightPerUnit;
-            $capacityTons = ceil($totalWeightKg / 1000); // Convert to tons and round up to integer (API usually expects int or float tons)
+            $capacityTons = ceil($totalWeightKg / 1000); // Convert to tons and round up to integer
 
             // Ensure minimum capacity (e.g. 1 ton)
             if ($capacityTons < 1) {
                 $capacityTons = 1;
             }
 
-            if (!$vehicleBody || !$vehicleSize) {
+            if (empty($requiredTruckBodies) || !$vehicleSize) {
                 $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode");
                 return null;
             }
@@ -110,20 +124,16 @@ class TransEuQuoteService
             };
 
             // Load structure
-            $defaultLoad = [
-                "amount" => 1, // Just one load entry representing the whole shipment
-                "length" => 1.2, // Pallet dimensions? Or calculated based on m2?
-                "name" => "Trawa w rolce ($qty m2)",
-                "type_of_load" => "2_europalette", // Or other type
-                "width" => 0.8,
-                "weight" => $totalWeightKg / 1000 // Weight in tons? API docs needed. Assuming tons or kg. Usually tons in transport APIs.
-            ];
-            // Note: The working example had amount: 5, length: 1.2, width: 0.8.
-            // If we send just one load item, we should probably set amount to number of pallets if we can calculate it.
-            // 1 pallet = approx 50 m2?
-            // Let's assume 1 pallet = 50m2 for calculation of 'amount' (pallets count).
+            // Assume 1 pallet = 50m2 for calculation of 'amount' (pallets count).
             $palletsCount = ceil($qty / 50);
-            $defaultLoad['amount'] = $palletsCount;
+
+            $defaultLoad = [
+                "amount" => $palletsCount,
+                "length" => 1.2,
+                "name" => "Trawa w rolce ($qty m2)",
+                "type_of_load" => $loadType,
+                "width" => 0.8,
+            ];
 
             $spots = [
                 [
@@ -160,10 +170,10 @@ class TransEuQuoteService
                 "capacity" => $capacityTons,
                 "gps" => true,
                 "other_requirements" => [],
-                "required_truck_bodies" => [$vehicleBody],
+                "required_truck_bodies" => $requiredTruckBodies,
                 "required_ways_of_loading" => [],
                 "vehicle_size_id" => $vehicleSize,
-                "transport_type" => "ftl"
+                "transport_type" => $freightType
             ];
             $requestModel->setVehicleRequirements($vehicleRequirements);
             $requestModel->setData('length', 2); // Configurable?
@@ -171,9 +181,13 @@ class TransEuQuoteService
             // 4. Call API
             $response = $this->apiService->predictPrice($requestModel);
 
-            // 5. Convert Currency
+            // 5. Convert Currency and Apply Factor
             if (isset($response['prediction'][0]) && isset($response['currency']) && $response['currency'] == 'EUR') {
                 $priceEur = $response['prediction'][0];
+
+                // Apply Factor
+                $priceEur *= $priceFactor;
+
                 return $this->convertEurToStoreCurrency($priceEur);
             }
 

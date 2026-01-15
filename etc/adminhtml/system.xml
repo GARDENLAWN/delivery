@@ -298,23 +298,37 @@
                     <label>Use Trans.eu Price Prediction</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
-                <field id="transeu_vehicle_body" translate="label" type="text" sortOrder="75" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_price_factor" translate="label" type="text" sortOrder="72" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Price Factor</label>
+                    <comment>Multiplier for the predicted price (e.g. 1.2 for +20%)</comment>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
+                <field id="transeu_vehicle_body" translate="label" type="multiselect" sortOrder="75" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Body</label>
-                    <comment>e.g. 9_curtainsider</comment>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleBody</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_vehicle_size" translate="label" type="text" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_vehicle_size" translate="label" type="select" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Size ID</label>
-                    <comment>e.g. 14_double_trailer_lorry_solo</comment>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleSize</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_capacity" translate="label" type="text" sortOrder="77" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Trans.eu Capacity (Tons)</label>
-                    <comment>e.g. 15</comment>
+                <field id="transeu_freight_type" translate="label" type="select" sortOrder="77" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Freight Type</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\FreightType</source_model>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
+                <field id="transeu_load_type" translate="label" type="select" sortOrder="78" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Load Type</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\LoadType</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
@@ -360,23 +374,37 @@
                     <label>Use Trans.eu Price Prediction</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
-                <field id="transeu_vehicle_body" translate="label" type="text" sortOrder="75" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_price_factor" translate="label" type="text" sortOrder="72" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Price Factor</label>
+                    <comment>Multiplier for the predicted price (e.g. 1.2 for +20%)</comment>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
+                <field id="transeu_vehicle_body" translate="label" type="multiselect" sortOrder="75" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Body</label>
-                    <comment>e.g. 9_curtainsider</comment>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleBody</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_vehicle_size" translate="label" type="text" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_vehicle_size" translate="label" type="select" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Size ID</label>
-                    <comment>e.g. 14_double_trailer_lorry_solo</comment>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleSize</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_capacity" translate="label" type="text" sortOrder="77" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Trans.eu Capacity (Tons)</label>
-                    <comment>e.g. 15</comment>
+                <field id="transeu_freight_type" translate="label" type="select" sortOrder="77" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Freight Type</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\FreightType</source_model>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
+                <field id="transeu_load_type" translate="label" type="select" sortOrder="78" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Load Type</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\LoadType</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
@@ -422,23 +450,37 @@
                     <label>Use Trans.eu Price Prediction</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
-                <field id="transeu_vehicle_body" translate="label" type="text" sortOrder="75" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_price_factor" translate="label" type="text" sortOrder="72" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Price Factor</label>
+                    <comment>Multiplier for the predicted price (e.g. 1.2 for +20%)</comment>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
+                <field id="transeu_vehicle_body" translate="label" type="multiselect" sortOrder="75" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Body</label>
-                    <comment>e.g. 9_curtainsider</comment>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleBody</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_vehicle_size" translate="label" type="text" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_vehicle_size" translate="label" type="select" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Size ID</label>
-                    <comment>e.g. 14_double_trailer_lorry_solo</comment>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleSize</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_capacity" translate="label" type="text" sortOrder="77" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Trans.eu Capacity (Tons)</label>
-                    <comment>e.g. 15</comment>
+                <field id="transeu_freight_type" translate="label" type="select" sortOrder="77" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Freight Type</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\FreightType</source_model>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
+                <field id="transeu_load_type" translate="label" type="select" sortOrder="78" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Load Type</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\LoadType</source_model>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>

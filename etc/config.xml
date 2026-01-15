@@ -136,6 +136,11 @@
                         ]
                     }
                 </pricing_config>
+                <use_transeu_api>0</use_transeu_api>
+                <transeu_vehicle_body>9_curtainsider,8_standard_tent</transeu_vehicle_body>
+                <transeu_vehicle_size>14_double_trailer_lorry_solo</transeu_vehicle_size>
+                <transeu_freight_type>ftl</transeu_freight_type>
+                <transeu_load_type>2_europalette</transeu_load_type>
                 <sort_order>60</sort_order>
             </direct_no_lift>
 
@@ -159,6 +164,11 @@
                         ]
                     }
                 </pricing_config>
+                <use_transeu_api>0</use_transeu_api>
+                <transeu_vehicle_body>9_curtainsider</transeu_vehicle_body>
+                <transeu_vehicle_size>5_solo</transeu_vehicle_size>
+                <transeu_freight_type>ltl</transeu_freight_type>
+                <transeu_load_type>2_europalette</transeu_load_type>
                 <sort_order>70</sort_order>
             </direct_lift>
 
@@ -182,6 +192,11 @@
                         ]
                     }
                 </pricing_config>
+                <use_transeu_api>0</use_transeu_api>
+                <transeu_vehicle_body>21_platform</transeu_vehicle_body>
+                <transeu_vehicle_size>3_lorry</transeu_vehicle_size>
+                <transeu_freight_type>ftl</transeu_freight_type>
+                <transeu_load_type>2_europalette</transeu_load_type>
                 <sort_order>80</sort_order>
             </direct_forklift>
         </carriers>

@@ -3,6 +3,7 @@
 namespace GardenLawn\Delivery\Model\Carrier;
 
 use GardenLawn\Delivery\Service\DistanceService;
+use GardenLawn\Delivery\Service\TransEuQuoteService;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Quote\Model\Quote\Address\RateRequest;
 use Magento\Quote\Model\Quote\Address\RateResult\ErrorFactory;
@@ -18,6 +19,7 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
     protected ResultFactory $_rateResultFactory;
     protected MethodFactory $_rateMethodFactory;
     protected DistanceService $distanceService;
+    protected TransEuQuoteService $transEuQuoteService;
 
     public function __construct(
         ScopeConfigInterface $scopeConfig,
@@ -26,11 +28,13 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
         ResultFactory        $rateResultFactory,
         MethodFactory        $rateMethodFactory,
         DistanceService      $distanceService,
+        TransEuQuoteService  $transEuQuoteService,
         array                $data = []
     ) {
         $this->_rateResultFactory = $rateResultFactory;
         $this->_rateMethodFactory = $rateMethodFactory;
         $this->distanceService = $distanceService;
+        $this->transEuQuoteService = $transEuQuoteService;
         parent::__construct($scopeConfig, $rateErrorFactory, $logger, $data);
     }
 
@@ -144,8 +148,27 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
             return false;
         }
 
-        // 4. Calculate Price based on Distance Tiers from JSON
-        $price = $this->calculateTierPrice($distance);
+        // 4. Calculate Price
+        $price = 0.0;
+
+        // Try Trans.eu first if enabled
+        if ($this->getConfigFlag('use_transeu_api')) {
+            $transEuPrice = $this->transEuQuoteService->getPrice(
+                $this->_code,
+                $origin,
+                $destination,
+                $distance
+            );
+
+            if ($transEuPrice !== null) {
+                $price = $transEuPrice;
+            }
+        }
+
+        // Fallback to Tier Price if Trans.eu failed or disabled
+        if ($price <= 0) {
+            $price = $this->calculateTierPrice($distance);
+        }
 
         if ($price <= 0) {
             return false;

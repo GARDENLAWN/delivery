@@ -147,6 +147,13 @@ class TransEuQuoteService
             $freightType = $this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl';
             $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';
 
+            // Other requirements
+            $otherRequirements = [];
+            $otherReqConfig = $this->scopeConfig->getValue($configPath . 'transeu_other_requirements');
+            if ($otherReqConfig) {
+                $otherRequirements = explode(',', $otherReqConfig);
+            }
+
             // 4. Build Request
             /** @var \GardenLawn\TransEu\Model\Data\PricePredictionRequest $requestModel */
             $requestModel = $this->requestFactory->create();
@@ -208,7 +215,7 @@ class TransEuQuoteService
             $vehicleRequirements = [
                 "capacity" => $capacityTons,
                 "gps" => true,
-                "other_requirements" => [],
+                "other_requirements" => $otherRequirements,
                 "required_truck_bodies" => $requiredTruckBodies,
                 "required_ways_of_loading" => [],
                 "vehicle_size_id" => $vehicleSize,

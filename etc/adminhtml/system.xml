@@ -343,6 +343,14 @@
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
+                <field id="transeu_other_requirements" translate="label" type="multiselect" sortOrder="79" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Other Requirements</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\OtherRequirements</source_model>
+                    <can_be_empty>1</can_be_empty>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
                 <field id="sort_order" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Sort Order</label>
                 </field>
@@ -419,6 +427,14 @@
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
+                <field id="transeu_other_requirements" translate="label" type="multiselect" sortOrder="79" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Other Requirements</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\OtherRequirements</source_model>
+                    <can_be_empty>1</can_be_empty>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
                 <field id="sort_order" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Sort Order</label>
                 </field>
@@ -491,6 +507,14 @@
                 <field id="transeu_load_type" translate="label" type="select" sortOrder="78" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Load Type</label>
                     <source_model>GardenLawn\Delivery\Model\Config\Source\LoadType</source_model>
+                    <depends>
+                        <field id="use_transeu_api">1</field>
+                    </depends>
+                </field>
+                <field id="transeu_other_requirements" translate="label" type="multiselect" sortOrder="79" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Trans.eu Other Requirements</label>
+                    <source_model>GardenLawn\Delivery\Model\Config\Source\OtherRequirements</source_model>
+                    <can_be_empty>1</can_be_empty>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>

@@ -44,6 +44,16 @@
                 </field>
             </group>
 
+            <group id="trans_eu_rules" translate="label" type="text" sortOrder="25" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Trans.eu Vehicle Rules</label>
+                <field id="vehicle_rules" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Vehicle Selection Rules</label>
+                    <frontend_model>GardenLawn\Delivery\Block\Adminhtml\System\Config\Form\Field\VehicleRules</frontend_model>
+                    <backend_model>Magento\Config\Model\Config\Backend\Serialized\ArraySerialized</backend_model>
+                    <comment>Define rules based on pallets count.</comment>
+                </field>
+            </group>
+
             <group id="truck_settings" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Truck Parameters (HERE API)</label>
                 <depends>

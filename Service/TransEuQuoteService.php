@@ -8,6 +8,7 @@ use Magento\Directory\Model\CurrencyFactory;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Psr\Log\LoggerInterface;
+use Magento\Framework\Serialize\Serializer\Json;
 
 class TransEuQuoteService
 {
@@ -18,6 +19,7 @@ class TransEuQuoteService
     protected $storeManager;
     protected $productRepository;
     protected $logger;
+    protected $json;
 
     public function __construct(
         ApiService $apiService,
@@ -26,7 +28,8 @@ class TransEuQuoteService
         CurrencyFactory $currencyFactory,
         StoreManagerInterface $storeManager,
         ProductRepositoryInterface $productRepository,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        Json $json
     ) {
         $this->apiService = $apiService;
         $this->requestFactory = $requestFactory;
@@ -35,6 +38,7 @@ class TransEuQuoteService
         $this->storeManager = $storeManager;
         $this->productRepository = $productRepository;
         $this->logger = $logger;
+        $this->json = $json;
     }
 
     /**
@@ -59,73 +63,86 @@ class TransEuQuoteService
             // 2. Get configuration
             $companyId = 1242549; // TODO: Get from config
             $userId = 1903733; // TODO: Get from config
-
-            $vehicleBody = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_body');
-            $vehicleSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
-            $freightType = $this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl';
-            $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';
             $priceFactor = (float)$this->scopeConfig->getValue($configPath . 'transeu_price_factor');
+            if ($priceFactor <= 0) $priceFactor = 1.2;
 
-            // Default factor to 1.2 if not set or invalid
-            if ($priceFactor <= 0) {
-                $priceFactor = 1.2;
-            }
+            // Calculate pallets and weight
+            // Assumption: 1 pallet = 35 m2 (based on description)
+            $m2PerPallet = 35;
+            $palletsCount = ceil($qty / $m2PerPallet);
 
-            // Handle multiselect for vehicle body
-            $requiredTruckBodies = [];
-            if ($vehicleBody) {
-                $requiredTruckBodies = explode(',', $vehicleBody);
-            }
-
-            // Calculate capacity based on weight
-            $weightPerUnit = 25.0; // Default 25kg per m2
+            $weightPerM2 = 25.0; // 25kg per m2
             try {
-                // Try to get weight from product GARDENLAWNS001
                 $product = $this->productRepository->get('GARDENLAWNS001');
                 if ($product->getWeight() > 0) {
-                    $weightPerUnit = (float)$product->getWeight();
+                    $weightPerM2 = (float)$product->getWeight();
                 }
-            } catch (\Exception $e) {
-                // Product not found or error, use default
+            } catch (\Exception $e) {}
+
+            $totalWeightKg = $qty * $weightPerM2;
+            $capacityTons = ceil($totalWeightKg / 1000);
+            if ($capacityTons < 1) $capacityTons = 1;
+
+            // 3. Determine Vehicle from Rules
+            $vehicleRulesJson = $this->scopeConfig->getValue('delivery/trans_eu_rules/vehicle_rules');
+            $vehicleSize = null;
+            $requiredTruckBodies = [];
+
+            if ($vehicleRulesJson) {
+                try {
+                    $rules = $this->json->unserialize($vehicleRulesJson);
+                    // Sort rules by max_pallets ascending
+                    usort($rules, function($a, $b) {
+                        return $a['max_pallets'] <=> $b['max_pallets'];
+                    });
+
+                    foreach ($rules as $rule) {
+                        if ($palletsCount <= $rule['max_pallets']) {
+                            $vehicleSize = $rule['vehicle_size'];
+                            $requiredTruckBodies = $rule['vehicle_bodies'];
+                            break;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $this->logger->error("Trans.eu Rules Error: " . $e->getMessage());
+                }
             }
 
-            $totalWeightKg = $qty * $weightPerUnit;
-            $capacityTons = ceil($totalWeightKg / 1000); // Convert to tons and round up to integer
-
-            // Ensure minimum capacity (e.g. 1 ton)
-            if ($capacityTons < 1) {
-                $capacityTons = 1;
+            // Fallback to carrier config if no rule matched
+            if (!$vehicleSize) {
+                $vehicleSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
+                $vehicleBody = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_body');
+                if ($vehicleBody) {
+                    $requiredTruckBodies = explode(',', $vehicleBody);
+                }
             }
 
             if (empty($requiredTruckBodies) || !$vehicleSize) {
-                $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode");
+                $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode (Pallets: $palletsCount)");
                 return null;
             }
 
-            // 3. Build Request
+            $freightType = $this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl';
+            $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';
+
+            // 4. Build Request
             /** @var \GardenLawn\TransEu\Model\Data\PricePredictionRequest $requestModel */
             $requestModel = $this->requestFactory->create();
 
             $requestModel->setCompanyId($companyId);
             $requestModel->setUserId($userId);
-            $requestModel->setDistance($distanceKm * 1000); // Convert km to meters
+            $requestModel->setDistance($distanceKm * 1000);
             $requestModel->setCurrency('EUR');
 
-            // Parse addresses
             $originParts = $this->parseAddress($originAddress);
             $destParts = $this->parseAddress($destinationAddress);
 
-            // Dates
             $pickupDate = date('Y-m-d', strtotime('+1 day'));
             $deliveryDate = date('Y-m-d', strtotime('+2 days'));
 
             $formatDate = function($dateStr) {
                 return gmdate('Y-m-d\TH:i:s.000\Z', strtotime($dateStr));
             };
-
-            // Load structure
-            // Assume 1 pallet = 50m2 for calculation of 'amount' (pallets count).
-            $palletsCount = ceil($qty / 50);
 
             $defaultLoad = [
                 "amount" => $palletsCount,
@@ -176,18 +193,15 @@ class TransEuQuoteService
                 "transport_type" => $freightType
             ];
             $requestModel->setVehicleRequirements($vehicleRequirements);
-            $requestModel->setData('length', 2); // Configurable?
+            $requestModel->setData('length', 2);
 
-            // 4. Call API
+            // 5. Call API
             $response = $this->apiService->predictPrice($requestModel);
 
-            // 5. Convert Currency and Apply Factor
+            // 6. Convert Currency and Apply Factor
             if (isset($response['prediction'][0]) && isset($response['currency']) && $response['currency'] == 'EUR') {
                 $priceEur = $response['prediction'][0];
-
-                // Apply Factor
                 $priceEur *= $priceFactor;
-
                 return $this->convertEurToStoreCurrency($priceEur);
             }
 
@@ -212,7 +226,6 @@ class TransEuQuoteService
                 }
             }
 
-            // Fallback
             $currencyEur = $this->currencyFactory->create()->load('EUR');
             $rate = $currencyEur->getRate($baseCurrencyCode);
             if ($rate) {

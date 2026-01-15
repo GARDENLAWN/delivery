@@ -9,6 +9,9 @@
             <api_provider>
                 <provider>here</provider>
             </api_provider>
+            <trans_eu_rules>
+                <vehicle_rules>[{"max_pallets":1,"vehicle_size":"1_bus","vehicle_bodies":["9_curtainsider"]},{"max_pallets":8,"vehicle_size":"5_solo","vehicle_bodies":["9_curtainsider"]},{"max_pallets":33,"vehicle_size":"3_lorry","vehicle_bodies":["9_curtainsider"]}]</vehicle_rules>
+            </trans_eu_rules>
             <truck_settings>
                 <vehicle_height>4.0</vehicle_height>
                 <vehicle_width>2.55</vehicle_width>
@@ -137,6 +140,7 @@
                     }
                 </pricing_config>
                 <use_transeu_api>0</use_transeu_api>
+                <transeu_price_factor>1.2</transeu_price_factor>
                 <transeu_vehicle_body>9_curtainsider,8_standard_tent</transeu_vehicle_body>
                 <transeu_vehicle_size>14_double_trailer_lorry_solo</transeu_vehicle_size>
                 <transeu_freight_type>ftl</transeu_freight_type>
@@ -165,6 +169,7 @@
                     }
                 </pricing_config>
                 <use_transeu_api>0</use_transeu_api>
+                <transeu_price_factor>1.2</transeu_price_factor>
                 <transeu_vehicle_body>9_curtainsider</transeu_vehicle_body>
                 <transeu_vehicle_size>5_solo</transeu_vehicle_size>
                 <transeu_freight_type>ltl</transeu_freight_type>
@@ -193,6 +198,7 @@
                     }
                 </pricing_config>
                 <use_transeu_api>0</use_transeu_api>
+                <transeu_price_factor>1.2</transeu_price_factor>
                 <transeu_vehicle_body>21_platform</transeu_vehicle_body>
                 <transeu_vehicle_size>3_lorry</transeu_vehicle_size>
                 <transeu_freight_type>ftl</transeu_freight_type>

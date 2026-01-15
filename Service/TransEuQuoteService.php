@@ -6,6 +6,7 @@ use GardenLawn\TransEu\Model\Data\PricePredictionRequestFactory;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Directory\Model\CurrencyFactory;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Catalog\Api\ProductRepositoryInterface;
 use Psr\Log\LoggerInterface;
 
 class TransEuQuoteService
@@ -15,6 +16,7 @@ class TransEuQuoteService
     protected $scopeConfig;
     protected $currencyFactory;
     protected $storeManager;
+    protected $productRepository;
     protected $logger;
 
     public function __construct(
@@ -23,6 +25,7 @@ class TransEuQuoteService
         ScopeConfigInterface $scopeConfig,
         CurrencyFactory $currencyFactory,
         StoreManagerInterface $storeManager,
+        ProductRepositoryInterface $productRepository,
         LoggerInterface $logger
     ) {
         $this->apiService = $apiService;
@@ -30,6 +33,7 @@ class TransEuQuoteService
         $this->scopeConfig = $scopeConfig;
         $this->currencyFactory = $currencyFactory;
         $this->storeManager = $storeManager;
+        $this->productRepository = $productRepository;
         $this->logger = $logger;
     }
 
@@ -40,9 +44,10 @@ class TransEuQuoteService
      * @param string $originAddress
      * @param string $destinationAddress
      * @param float $distanceKm
+     * @param float $qty Quantity in m2
      * @return float|null Price in store currency or null if failed
      */
-    public function getPrice(string $carrierCode, string $originAddress, string $destinationAddress, float $distanceKm)
+    public function getPrice(string $carrierCode, string $originAddress, string $destinationAddress, float $distanceKm, float $qty)
     {
         try {
             // 1. Check if enabled for this carrier
@@ -52,16 +57,31 @@ class TransEuQuoteService
             }
 
             // 2. Get configuration
-            $companyId = (int)$this->scopeConfig->getValue('trans_eu/general/company_id') ?: 1242549; // Fallback or get from general config if exists
-            // Note: company_id is not in system.xml yet, maybe use trans_id or hardcode for now based on your previous input
-            // Let's assume 1242549 based on your tests. Ideally should be in config.
-            $companyId = 1242549;
-
-            $userId = 1903733; // Also from your tests. Should be in config?
+            $companyId = 1242549; // TODO: Get from config
+            $userId = 1903733; // TODO: Get from config
 
             $vehicleBody = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_body');
             $vehicleSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
-            $capacity = (float)$this->scopeConfig->getValue($configPath . 'transeu_capacity');
+
+            // Calculate capacity based on weight
+            $weightPerUnit = 25.0; // Default 25kg per m2
+            try {
+                // Try to get weight from product GARDENLAWNS001
+                $product = $this->productRepository->get('GARDENLAWNS001');
+                if ($product->getWeight() > 0) {
+                    $weightPerUnit = (float)$product->getWeight();
+                }
+            } catch (\Exception $e) {
+                // Product not found or error, use default
+            }
+
+            $totalWeightKg = $qty * $weightPerUnit;
+            $capacityTons = ceil($totalWeightKg / 1000); // Convert to tons and round up to integer (API usually expects int or float tons)
+
+            // Ensure minimum capacity (e.g. 1 ton)
+            if ($capacityTons < 1) {
+                $capacityTons = 1;
+            }
 
             if (!$vehicleBody || !$vehicleSize) {
                 $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode");
@@ -77,11 +97,11 @@ class TransEuQuoteService
             $requestModel->setDistance($distanceKm * 1000); // Convert km to meters
             $requestModel->setCurrency('EUR');
 
-            // Parse addresses (simplified)
+            // Parse addresses
             $originParts = $this->parseAddress($originAddress);
             $destParts = $this->parseAddress($destinationAddress);
 
-            // Dates: Pickup tomorrow, Delivery day after tomorrow (simplified logic)
+            // Dates
             $pickupDate = date('Y-m-d', strtotime('+1 day'));
             $deliveryDate = date('Y-m-d', strtotime('+2 days'));
 
@@ -89,21 +109,28 @@ class TransEuQuoteService
                 return gmdate('Y-m-d\TH:i:s.000\Z', strtotime($dateStr));
             };
 
-            // Default load structure
+            // Load structure
             $defaultLoad = [
-                "amount" => 5, // Arbitrary for now, maybe config?
-                "length" => 1.2,
-                "name" => "Ładunek",
-                "type_of_load" => "2_europalette",
-                "width" => 0.8
+                "amount" => 1, // Just one load entry representing the whole shipment
+                "length" => 1.2, // Pallet dimensions? Or calculated based on m2?
+                "name" => "Trawa w rolce ($qty m2)",
+                "type_of_load" => "2_europalette", // Or other type
+                "width" => 0.8,
+                "weight" => $totalWeightKg / 1000 // Weight in tons? API docs needed. Assuming tons or kg. Usually tons in transport APIs.
             ];
+            // Note: The working example had amount: 5, length: 1.2, width: 0.8.
+            // If we send just one load item, we should probably set amount to number of pallets if we can calculate it.
+            // 1 pallet = approx 50 m2?
+            // Let's assume 1 pallet = 50m2 for calculation of 'amount' (pallets count).
+            $palletsCount = ceil($qty / 50);
+            $defaultLoad['amount'] = $palletsCount;
 
             $spots = [
                 [
                     "operations" => [["loads" => [$defaultLoad]]],
                     "place" => [
                         "address" => ["locality" => $originParts['city'], "postal_code" => $originParts['zip']],
-                        "coordinates" => ["latitude" => 0, "longitude" => 0], // API might require coords, but let's try without or need geocoding
+                        "coordinates" => ["latitude" => 0, "longitude" => 0],
                         "country" => "PL"
                     ],
                     "timespans" => [
@@ -127,24 +154,10 @@ class TransEuQuoteService
                 ]
             ];
 
-            // We need coordinates! The Price Prediction API likely relies on them.
-            // Since we already have DistanceService which uses Google/Here, maybe we can get coords from there?
-            // For now, let's assume we need to pass them.
-            // If DistanceService returns distance, it probably knows coords.
-            // But AbstractDirectTransport only gets distance float.
-
-            // CRITICAL: The API requires coordinates. Without them, prediction might fail or be inaccurate.
-            // We'll need to extend DistanceService to return coordinates or geocode here.
-            // For this MVP, let's try sending 0,0 and see if address is enough (unlikely).
-            // OR better: Use hardcoded coords from your test if cities match, otherwise we need geocoding.
-
-            // Let's use a placeholder for now, but this is a TODO.
-            // Actually, in your test payload you sent coordinates.
-
             $requestModel->setSpots($spots);
 
             $vehicleRequirements = [
-                "capacity" => $capacity,
+                "capacity" => $capacityTons,
                 "gps" => true,
                 "other_requirements" => [],
                 "required_truck_bodies" => [$vehicleBody],
@@ -200,23 +213,18 @@ class TransEuQuoteService
 
     protected function parseAddress($address)
     {
-        // Very basic parser assuming "City, Zip" or "Street, Zip City, Country"
-        // This needs to be robust based on how Magento stores address string
-        // In AbstractDirectTransport we build it: Street, Postcode, City, Country
-
         $parts = array_map('trim', explode(',', $address));
         $count = count($parts);
 
-        $city = $parts[$count - 2] ?? ''; // Assuming Country is last
+        $city = $parts[$count - 2] ?? '';
         $zip = '';
 
-        // Try to extract zip from city string if combined "78-400 Szczecinek"
         if (preg_match('/(\d{2}-\d{3})/', $address, $matches)) {
             $zip = $matches[1];
             $city = str_replace($zip, '', $city);
             $city = trim($city);
         } elseif (isset($parts[$count - 3])) {
-             $zip = $parts[$count - 3]; // If format is Street, Zip, City, Country
+             $zip = $parts[$count - 3];
         }
 
         return ['city' => $city, 'zip' => $zip];

@@ -157,7 +157,8 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
                 $this->_code,
                 $origin,
                 $destination,
-                $distance
+                $distance,
+                $qnt // Pass quantity for weight calculation
             );
 
             if ($transEuPrice !== null) {

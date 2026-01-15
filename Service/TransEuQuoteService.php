@@ -66,52 +66,40 @@ class TransEuQuoteService
             $priceFactor = (float)$this->scopeConfig->getValue($configPath . 'transeu_price_factor');
             if ($priceFactor <= 0) $priceFactor = 1.2;
 
-            // Calculate pallets and weight
-            // Assumption: 1 pallet = 35 m2 (based on description)
-            $m2PerPallet = 35;
-            $palletsCount = ceil($qty / $m2PerPallet);
-
-            $weightPerM2 = 25.0; // 25kg per m2
-            try {
-                $product = $this->productRepository->get('GARDENLAWNS001');
-                if ($product->getWeight() > 0) {
-                    $weightPerM2 = (float)$product->getWeight();
-                }
-            } catch (\Exception $e) {}
-
-            $totalWeightKg = $qty * $weightPerM2;
-            $capacityTons = ceil($totalWeightKg / 1000);
-            if ($capacityTons < 1) $capacityTons = 1;
-
             // 3. Determine Vehicle from Rules
             $vehicleRulesJson = $this->scopeConfig->getValue('delivery/trans_eu_rules/vehicle_rules');
             $vehicleSize = null;
             $requiredTruckBodies = [];
+            $palletsCount = 0;
 
             if ($vehicleRulesJson) {
                 try {
                     $rules = $this->json->unserialize($vehicleRulesJson);
-                    // Sort rules by max_pallets ascending
+                    // Sort rules by max_pallets ascending to find the smallest fitting vehicle
                     usort($rules, function($a, $b) {
                         return $a['max_pallets'] <=> $b['max_pallets'];
                     });
 
                     foreach ($rules as $rule) {
-                        if ($palletsCount <= $rule['max_pallets']) {
+                        $m2PerPallet = isset($rule['m2_per_pallet']) && $rule['m2_per_pallet'] > 0 ? (float)$rule['m2_per_pallet'] : 35.0;
+                        $calculatedPallets = ceil($qty / $m2PerPallet);
+
+                        if ($calculatedPallets <= $rule['max_pallets']) {
                             $vehicleSize = $rule['vehicle_size'];
-                            // Handle multiselect in rules (might be array or comma-separated string)
+                            // Handle multiselect in rules
                             if (is_array($vehicleSize)) {
-                                $vehicleSize = reset($vehicleSize); // Take first one if multiple selected
+                                $vehicleSize = reset($vehicleSize);
                             } elseif (strpos($vehicleSize, ',') !== false) {
                                 $parts = explode(',', $vehicleSize);
                                 $vehicleSize = reset($parts);
                             }
 
                             $requiredTruckBodies = $rule['vehicle_bodies'];
-                            // Handle if it's a string (from simple select) or array
                             if (!is_array($requiredTruckBodies)) {
                                 $requiredTruckBodies = [$requiredTruckBodies];
                             }
+
+                            $palletsCount = $calculatedPallets;
                             break;
                         }
                     }
@@ -122,9 +110,12 @@ class TransEuQuoteService
 
             // Fallback to carrier config if no rule matched
             if (!$vehicleSize) {
+                // Default fallback calculation
+                $m2PerPallet = 35.0;
+                $palletsCount = ceil($qty / $m2PerPallet);
+
                 $vehicleSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
                 if ($vehicleSize) {
-                    // Handle multiselect in carrier config
                     $parts = explode(',', $vehicleSize);
                     $vehicleSize = reset($parts);
                 }
@@ -136,9 +127,22 @@ class TransEuQuoteService
             }
 
             if (empty($requiredTruckBodies) || !$vehicleSize) {
-                $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode (Pallets: $palletsCount)");
+                $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode (Qty: $qty m2)");
                 return null;
             }
+
+            // Calculate weight
+            $weightPerM2 = 25.0; // 25kg per m2
+            try {
+                $product = $this->productRepository->get('GARDENLAWNS001');
+                if ($product->getWeight() > 0) {
+                    $weightPerM2 = (float)$product->getWeight();
+                }
+            } catch (\Exception $e) {}
+
+            $totalWeightKg = $qty * $weightPerM2;
+            $capacityTons = ceil($totalWeightKg / 1000);
+            if ($capacityTons < 1) $capacityTons = 1;
 
             $freightType = $this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl';
             $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';

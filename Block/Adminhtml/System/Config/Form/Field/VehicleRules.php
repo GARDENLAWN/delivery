@@ -16,6 +16,11 @@ class VehicleRules extends AbstractFieldArray
             'label' => __('Max Pallets'),
             'class' => 'required-entry validate-digits'
         ]);
+        $this->addColumn('m2_per_pallet', [
+            'label' => __('m2 / Pallet'),
+            'class' => 'required-entry validate-number',
+            'style' => 'width: 80px'
+        ]);
         $this->addColumn('vehicle_size', [
             'label' => __('Vehicle Size'),
             'renderer' => $this->getVehicleSizeRenderer()
@@ -60,15 +65,26 @@ class VehicleRules extends AbstractFieldArray
         $vehicleSize = $row->getVehicleSize();
         if ($vehicleSize !== null) {
             // Handle multiselect array or single value
-            $selectedSizes = is_array($vehicleSize) ? $vehicleSize : explode(',', $vehicleSize);
+            $selectedSizes = is_array($vehicleSize) ? $vehicleSize : explode(',', (string)$vehicleSize);
             foreach ($selectedSizes as $size) {
-                $options['option_' . $this->getVehicleSizeRenderer()->calcOptionHash($size)] = 'selected="selected"';
+                if (is_string($size) || is_numeric($size)) {
+                    $options['option_' . $this->getVehicleSizeRenderer()->calcOptionHash($size)] = 'selected="selected"';
+                }
             }
         }
 
         $vehicleBody = $row->getVehicleBodies();
         if ($vehicleBody !== null) {
-            $options['option_' . $this->getVehicleBodyRenderer()->calcOptionHash($vehicleBody)] = 'selected="selected"';
+            // Handle potential array if it was saved as such
+            if (is_array($vehicleBody)) {
+                foreach ($vehicleBody as $body) {
+                    if (is_string($body) || is_numeric($body)) {
+                        $options['option_' . $this->getVehicleBodyRenderer()->calcOptionHash($body)] = 'selected="selected"';
+                    }
+                }
+            } else {
+                $options['option_' . $this->getVehicleBodyRenderer()->calcOptionHash($vehicleBody)] = 'selected="selected"';
+            }
         }
 
         $row->setData('option_extra_attrs', $options);

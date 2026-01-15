@@ -99,7 +99,19 @@ class TransEuQuoteService
                     foreach ($rules as $rule) {
                         if ($palletsCount <= $rule['max_pallets']) {
                             $vehicleSize = $rule['vehicle_size'];
+                            // Handle multiselect in rules (might be array or comma-separated string)
+                            if (is_array($vehicleSize)) {
+                                $vehicleSize = reset($vehicleSize); // Take first one if multiple selected
+                            } elseif (strpos($vehicleSize, ',') !== false) {
+                                $parts = explode(',', $vehicleSize);
+                                $vehicleSize = reset($parts);
+                            }
+
                             $requiredTruckBodies = $rule['vehicle_bodies'];
+                            // Handle if it's a string (from simple select) or array
+                            if (!is_array($requiredTruckBodies)) {
+                                $requiredTruckBodies = [$requiredTruckBodies];
+                            }
                             break;
                         }
                     }
@@ -111,6 +123,12 @@ class TransEuQuoteService
             // Fallback to carrier config if no rule matched
             if (!$vehicleSize) {
                 $vehicleSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
+                if ($vehicleSize) {
+                    // Handle multiselect in carrier config
+                    $parts = explode(',', $vehicleSize);
+                    $vehicleSize = reset($parts);
+                }
+
                 $vehicleBody = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_body');
                 if ($vehicleBody) {
                     $requiredTruckBodies = explode(',', $vehicleBody);

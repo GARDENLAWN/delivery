@@ -59,7 +59,11 @@ class VehicleRules extends AbstractFieldArray
 
         $vehicleSize = $row->getVehicleSize();
         if ($vehicleSize !== null) {
-            $options['option_' . $this->getVehicleSizeRenderer()->calcOptionHash($vehicleSize)] = 'selected="selected"';
+            // Handle multiselect array or single value
+            $selectedSizes = is_array($vehicleSize) ? $vehicleSize : explode(',', $vehicleSize);
+            foreach ($selectedSizes as $size) {
+                $options['option_' . $this->getVehicleSizeRenderer()->calcOptionHash($size)] = 'selected="selected"';
+            }
         }
 
         $vehicleBody = $row->getVehicleBodies();

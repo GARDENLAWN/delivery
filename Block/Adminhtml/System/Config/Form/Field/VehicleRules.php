@@ -37,12 +37,15 @@ class VehicleRules extends AbstractFieldArray
     /**
      * Prepare existing row data object
      * This fixes the "ReferenceError" by ensuring all keys exist
+     * And fixes "not a valid selector" by ensuring IDs are not numeric
      *
      * @return array
      */
     public function getArrayRows()
     {
         $result = parent::getArrayRows();
+        $newResult = [];
+
         foreach ($result as $rowId => $row) {
             // Ensure the key exists to prevent JS error
             if (!$row->hasData('m2_per_pallet')) {
@@ -53,8 +56,18 @@ class VehicleRules extends AbstractFieldArray
             if (!$row->hasData('max_pallets')) {
                 $row->setData('max_pallets', '');
             }
+
+            // Fix for "not a valid selector" error when ID is numeric (e.g. "0")
+            // We prefix it with "row_" to make it a valid CSS ID
+            if (is_numeric($rowId)) {
+                $newRowId = 'row_' . $rowId;
+                $row->setData('_id', $newRowId);
+                $newResult[$newRowId] = $row;
+            } else {
+                $newResult[$rowId] = $row;
+            }
         }
-        return $result;
+        return $newResult;
     }
 
     protected function getVehicleSizeRenderer()

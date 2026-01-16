@@ -34,6 +34,29 @@ class VehicleRules extends AbstractFieldArray
         $this->_addButtonLabel = __('Add Rule');
     }
 
+    /**
+     * Prepare existing row data object
+     * This fixes the "ReferenceError" by ensuring all keys exist
+     *
+     * @return array
+     */
+    public function getArrayRows()
+    {
+        $result = parent::getArrayRows();
+        foreach ($result as $rowId => $row) {
+            // Ensure the key exists to prevent JS error
+            if (!$row->hasData('m2_per_pallet')) {
+                $row->setData('m2_per_pallet', '35'); // Default value
+            }
+
+            // Ensure other keys exist too just in case
+            if (!$row->hasData('max_pallets')) {
+                $row->setData('max_pallets', '');
+            }
+        }
+        return $result;
+    }
+
     protected function getVehicleSizeRenderer()
     {
         if (!$this->vehicleSizeRenderer) {

@@ -64,7 +64,7 @@ class TransEuQuoteService
             $companyId = 1242549; // TODO: Get from config
             $userId = 1903733; // TODO: Get from config
             $priceFactor = (float)$this->scopeConfig->getValue($configPath . 'transeu_price_factor');
-            if ($priceFactor <= 0) $priceFactor = 1.2;
+            if ($priceFactor <= 0) $priceFactor = 1;
 
             // 3. Determine Vehicle from Rules
             $vehicleRulesJson = $this->scopeConfig->getValue('delivery/trans_eu_rules/vehicle_rules');

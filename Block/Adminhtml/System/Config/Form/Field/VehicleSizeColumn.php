@@ -27,7 +27,8 @@ class VehicleSizeColumn extends Select
         if (!$this->getOptions()) {
             $this->setOptions($this->vehicleSizeSource->toOptionArray());
         }
-        $this->setExtraParams('multiple="multiple" size="5" style="width: 150px;"');
+        // Increased width to 250px
+        $this->setExtraParams('multiple="multiple" size="5" style="width: 250px;"');
         return parent::_toHtml();
     }
 }

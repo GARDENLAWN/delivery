@@ -14,7 +14,8 @@ class VehicleRules extends AbstractFieldArray
     {
         $this->addColumn('max_pallets', [
             'label' => __('Max Pallets'),
-            'class' => 'required-entry validate-digits'
+            'class' => 'required-entry validate-digits',
+            'style' => 'width: 80px'
         ]);
         $this->addColumn('m2_per_pallet', [
             'label' => __('m2 / Pallet'),
@@ -23,11 +24,13 @@ class VehicleRules extends AbstractFieldArray
         ]);
         $this->addColumn('vehicle_size', [
             'label' => __('Vehicle Size'),
-            'renderer' => $this->getVehicleSizeRenderer()
+            'renderer' => $this->getVehicleSizeRenderer(),
+            'style' => 'width: 200px'
         ]);
         $this->addColumn('vehicle_bodies', [
             'label' => __('Vehicle Body'),
-            'renderer' => $this->getVehicleBodyRenderer()
+            'renderer' => $this->getVehicleBodyRenderer(),
+            'style' => 'width: 200px'
         ]);
 
         $this->_addAfter = false;

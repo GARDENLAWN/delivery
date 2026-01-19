@@ -84,8 +84,9 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1"><?= $block->escapeHtml(__('Destination Postcode')) ?></label>
             <div class="flex gap-2">
-                <input type="text" x-model="postcode" placeholder="e.g. 00-001"
+                <input type="text" x-model="postcode" placeholder="00-000"
                        class="form-input w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                       @input="updatePostcode"
                        @keydown.enter.prevent="calculate"
                 >
                 <button type="button" @click="calculate" class="btn btn-secondary shrink-0" :disabled="isLoading">
@@ -208,6 +209,18 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                         }
                     });
                 }
+            },
+
+            updatePostcode(event) {
+                let value = event.target.value;
+                const digits = value.replace(/\D/g, '');
+                if (digits.length > 2) {
+                    value = digits.substring(0, 2) + '-' + digits.substring(2, 5);
+                } else {
+                    value = digits;
+                }
+                this.postcode = value;
+                event.target.value = value;
             },
 
             get activePrice() {

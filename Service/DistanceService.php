@@ -199,11 +199,11 @@ class DistanceService
             }
 
             // Geocode addresses to coordinates
-            $originInfo = $this->geocodeAddressHere($origin);
-            $destInfo = $this->geocodeAddressHere($destination);
+            $originInfo = $this->getCoordinates($origin); // Use getCoordinates to leverage cache
+            $destInfo = $this->getCoordinates($destination); // Use getCoordinates to leverage cache
 
             if (!$originInfo || !$destInfo) {
-                $this->logger->warning('DistanceService: Failed to geocode addresses');
+                $this->logger->warning("DistanceService: Failed to geocode addresses. Origin: '$origin', Dest: '$destination'");
                 return 0.0;
             }
 

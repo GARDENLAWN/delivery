@@ -107,13 +107,17 @@ class TransEuQuoteService
                         $debug[] = "Matched rule: Max Pallets {$rule['max_pallets']} (Calculated: $calculatedPallets)";
 
                         $rawSize = $rule['vehicle_size'];
-                        if ($rawSize) {
-                            $vehicleSizes = [$rawSize];
+                        if (is_array($rawSize)) {
+                            $vehicleSizes = $rawSize;
+                        } elseif (is_string($rawSize)) {
+                            $vehicleSizes = explode(',', $rawSize);
                         }
 
                         $rawBody = $rule['vehicle_bodies'];
-                        if ($rawBody) {
-                            $requiredTruckBodies = [$rawBody];
+                        if (is_array($rawBody)) {
+                            $requiredTruckBodies = $rawBody;
+                        } elseif (is_string($rawBody)) {
+                            $requiredTruckBodies = explode(',', $rawBody);
                         }
 
                         if (isset($rule['freight_type']) && $rule['freight_type']) {
@@ -299,10 +303,8 @@ class TransEuQuoteService
 
             $defaultLoad = [
                 "amount" => $params['load_amount'],
-                "length" => $params['load_length'],
                 "name" => "Trawa w rolce ($qty m2)",
                 "type_of_load" => $params['load_type'],
-                "width" => $params['load_width'],
             ];
 
             $spots = [

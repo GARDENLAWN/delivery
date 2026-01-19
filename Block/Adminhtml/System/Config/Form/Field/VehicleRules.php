@@ -46,7 +46,7 @@ class VehicleRules extends AbstractFieldArray
         $this->addColumn('vehicle_bodies', [
             'label' => __('Vehicle Body'),
             'renderer' => $this->getVehicleBodyRenderer(),
-            'style' => 'width: 180px'
+            'style' => 'width: 250px'
         ]);
 
         $this->_addAfter = false;
@@ -137,16 +137,29 @@ class VehicleRules extends AbstractFieldArray
 
         $vehicleSize = $row->getVehicleSize();
         if ($vehicleSize !== null) {
-            $options['option_' . $this->getVehicleSizeRenderer()->calcOptionHash($vehicleSize)] = 'selected="selected"';
+            $selectedSizes = is_array($vehicleSize) ? $vehicleSize : explode(',', (string)$vehicleSize);
+            foreach ($selectedSizes as $size) {
+                if (is_string($size) || is_numeric($size)) {
+                    $options['option_' . $this->getVehicleSizeRenderer()->calcOptionHash($size)] = 'selected="selected"';
+                }
+            }
         }
 
         $vehicleBody = $row->getVehicleBodies();
         if ($vehicleBody !== null) {
-            $options['option_' . $this->getVehicleBodyRenderer()->calcOptionHash($vehicleBody)] = 'selected="selected"';
+            $selectedBodies = is_array($vehicleBody) ? $vehicleBody : explode(',', (string)$vehicleBody);
+            foreach ($selectedBodies as $body) {
+                if (is_string($body) || is_numeric($body)) {
+                    $options['option_' . $this->getVehicleBodyRenderer()->calcOptionHash($body)] = 'selected="selected"';
+                }
+            }
         }
 
         $freightType = $row->getFreightType();
         if ($freightType !== null) {
+            if (is_array($freightType)) {
+                $freightType = reset($freightType);
+            }
             $options['option_' . $this->getFreightTypeRenderer()->calcOptionHash($freightType)] = 'selected="selected"';
         }
 

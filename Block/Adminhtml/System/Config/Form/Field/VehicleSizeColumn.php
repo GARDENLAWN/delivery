@@ -19,7 +19,7 @@ class VehicleSizeColumn extends Select
 
     public function setInputName($value)
     {
-        return $this->setName($value);
+        return $this->setName($value . '[]');
     }
 
     public function _toHtml()
@@ -27,7 +27,7 @@ class VehicleSizeColumn extends Select
         if (!$this->getOptions()) {
             $this->setOptions($this->vehicleSizeSource->toOptionArray());
         }
-        $this->setExtraParams('style="width: 180px;"');
+        $this->setExtraParams('multiple="multiple" size="5" style="width: 180px;"');
         return parent::_toHtml();
     }
 }

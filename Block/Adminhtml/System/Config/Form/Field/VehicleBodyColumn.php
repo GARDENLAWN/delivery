@@ -19,7 +19,7 @@ class VehicleBodyColumn extends Select
 
     public function setInputName($value)
     {
-        return $this->setName($value);
+        return $this->setName($value . '[]');
     }
 
     public function _toHtml()
@@ -27,7 +27,7 @@ class VehicleBodyColumn extends Select
         if (!$this->getOptions()) {
             $this->setOptions($this->vehicleBodySource->toOptionArray());
         }
-        $this->setExtraParams('style="width: 180px;"');
+        $this->setExtraParams('multiple="multiple" size="5" style="width: 250px;"');
         return parent::_toHtml();
     }
 }

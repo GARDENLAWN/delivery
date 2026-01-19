@@ -63,15 +63,159 @@ class TransEuQuoteService
     }
 
     /**
-     * Get predicted price for delivery
-     *
-     * @param string $carrierCode
-     * @param string $originAddress
-     * @param string $destinationAddress
-     * @param float $distanceKm
-     * @param float $qty Quantity in m2
-     * @return float|null Price in store currency or null if failed
+     * Resolve parameters based on rules and configuration without sending request
      */
+    public function prepareRequestParams(string $carrierCode, float $qty)
+    {
+        return $this->resolveParams($carrierCode, $qty);
+    }
+
+    protected function resolveParams(string $carrierCode, float $qty)
+    {
+        $result = [
+            'success' => false,
+            'params' => [],
+            'debug' => []
+        ];
+
+        $debug = [];
+        $configPath = "carriers/$carrierCode/";
+
+        // 1. Determine Vehicle from Rules
+        $vehicleRulesJson = $this->scopeConfig->getValue('delivery/trans_eu_rules/vehicle_rules');
+        $vehicleSizes = [];
+        $requiredTruckBodies = [];
+        $palletsCount = 0;
+        $rulePalletLength = null;
+        $rulePalletWidth = null;
+        $ruleFreightType = null;
+        $matchedRule = null;
+
+        if ($vehicleRulesJson) {
+            try {
+                $rules = $this->json->unserialize($vehicleRulesJson);
+                usort($rules, function($a, $b) {
+                    return $a['max_pallets'] <=> $b['max_pallets'];
+                });
+
+                foreach ($rules as $rule) {
+                    $m2PerPallet = isset($rule['m2_per_pallet']) && $rule['m2_per_pallet'] > 0 ? (float)$rule['m2_per_pallet'] : 35.0;
+                    $calculatedPallets = ceil($qty / $m2PerPallet);
+
+                    if ($calculatedPallets <= $rule['max_pallets']) {
+                        $matchedRule = $rule;
+                        $debug[] = "Matched rule: Max Pallets {$rule['max_pallets']} (Calculated: $calculatedPallets)";
+
+                        $rawSize = $rule['vehicle_size'];
+                        if ($rawSize) {
+                            $vehicleSizes = [$rawSize];
+                        }
+
+                        $rawBody = $rule['vehicle_bodies'];
+                        if ($rawBody) {
+                            $requiredTruckBodies = [$rawBody];
+                        }
+
+                        if (isset($rule['freight_type']) && $rule['freight_type']) {
+                            $ruleFreightType = $rule['freight_type'];
+                        }
+
+                        if (isset($rule['pallet_length']) && $rule['pallet_length'] > 0) {
+                            $rulePalletLength = (float)$rule['pallet_length'];
+                        }
+                        if (isset($rule['pallet_width']) && $rule['pallet_width'] > 0) {
+                            $rulePalletWidth = (float)$rule['pallet_width'];
+                        }
+
+                        $palletsCount = $calculatedPallets;
+                        break;
+                    }
+                }
+            } catch (\Exception $e) {
+                $debug[] = "Error processing rules: " . $e->getMessage();
+            }
+        }
+
+        // Fallback
+        if (empty($vehicleSizes)) {
+            $debug[] = "No rule matched. Using fallback configuration.";
+            $m2PerPallet = 35.0;
+            $palletsCount = ceil($qty / $m2PerPallet);
+
+            $rawSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
+            if ($rawSize) {
+                $vehicleSizes = explode(',', $rawSize);
+            }
+
+            $vehicleBody = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_body');
+            if ($vehicleBody) {
+                $requiredTruckBodies = explode(',', $vehicleBody);
+            }
+        }
+
+        if (empty($requiredTruckBodies) || empty($vehicleSizes)) {
+            $debug[] = "Missing vehicle configuration.";
+            $result['debug'] = $debug;
+            return $result;
+        }
+
+        $finalVehicleSizeId = $this->resolveVehicleSizeId($vehicleSizes);
+        if (!$finalVehicleSizeId) {
+            $debug[] = "Could not resolve vehicle size ID.";
+            $result['debug'] = $debug;
+            return $result;
+        }
+
+        // Calculate weight
+        $weightPerM2 = 25.0;
+        $targetSku = $this->scopeConfig->getValue($configPath . 'target_sku') ?: 'GARDENLAWNS001';
+        try {
+            $product = $this->productRepository->get($targetSku);
+            if ($product->getWeight() > 0) {
+                $weightPerM2 = (float)$product->getWeight();
+            }
+        } catch (\Exception $e) {}
+
+        $totalWeightKg = $qty * $weightPerM2;
+        $capacityTons = ceil($totalWeightKg / 1000);
+        if ($capacityTons < 1) $capacityTons = 1;
+
+        $freightType = $ruleFreightType ?: ($this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl');
+        $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';
+
+        // Calculate LDM
+        $dims = $this->getLoadDimensions($loadType);
+        $loadLength = $rulePalletLength ?: $dims['length'];
+        $loadWidth = $rulePalletWidth ?: $dims['width'];
+
+        $totalLdm = ($palletsCount * $loadLength * $loadWidth) / 2.4;
+        $totalLdm = max(0.1, round($totalLdm, 1));
+
+        $otherRequirements = [];
+        $otherReqConfig = $this->scopeConfig->getValue($configPath . 'transeu_other_requirements');
+        if ($otherReqConfig) {
+            $otherRequirements = explode(',', $otherReqConfig);
+        }
+
+        $result['success'] = true;
+        $result['debug'] = $debug;
+        $result['matched_rule'] = $matchedRule;
+        $result['params'] = [
+            'vehicle_size_id' => $finalVehicleSizeId,
+            'vehicle_bodies' => $requiredTruckBodies,
+            'freight_type' => $freightType,
+            'capacity_tons' => $capacityTons,
+            'load_amount' => $palletsCount,
+            'load_type' => $loadType,
+            'load_length' => $loadLength,
+            'load_width' => $loadWidth,
+            'total_ldm' => $totalLdm,
+            'other_requirements' => $otherRequirements
+        ];
+
+        return $result;
+    }
+
     public function getPrice(string $carrierCode, string $originAddress, string $destinationAddress, float $distanceKm, float $qty)
     {
         $this->debugInfo = [
@@ -88,157 +232,41 @@ class TransEuQuoteService
         ];
 
         try {
-            // 1. Check if enabled for this carrier
             $configPath = "carriers/$carrierCode/";
             if (!$this->scopeConfig->isSetFlag($configPath . 'use_transeu_api')) {
                 $this->debugInfo['steps'][] = "Trans.eu API disabled for this carrier.";
                 return null;
             }
 
-            // 2. Get configuration
             $companyId = 1242549; // TODO: Get from config
             $userId = 1903733; // TODO: Get from config
             $priceFactor = (float)$this->scopeConfig->getValue($configPath . 'transeu_price_factor');
             if ($priceFactor <= 0) $priceFactor = 1;
 
-            // 3. Determine Vehicle from Rules
-            $vehicleRulesJson = $this->scopeConfig->getValue('delivery/trans_eu_rules/vehicle_rules');
-            $vehicleSizes = [];
-            $requiredTruckBodies = [];
-            $palletsCount = 0;
-            $rulePalletLength = null;
-            $rulePalletWidth = null;
-            $ruleFreightType = null;
+            // Resolve Params
+            $resolved = $this->resolveParams($carrierCode, $qty);
+            $this->debugInfo['steps'] = array_merge($this->debugInfo['steps'], $resolved['debug']);
+            $this->debugInfo['matched_rule'] = $resolved['matched_rule'] ?? null;
 
-            if ($vehicleRulesJson) {
-                try {
-                    $rules = $this->json->unserialize($vehicleRulesJson);
-                    // Sort rules by max_pallets ascending to find the smallest fitting vehicle
-                    usort($rules, function($a, $b) {
-                        return $a['max_pallets'] <=> $b['max_pallets'];
-                    });
-
-                    foreach ($rules as $rule) {
-                        $m2PerPallet = isset($rule['m2_per_pallet']) && $rule['m2_per_pallet'] > 0 ? (float)$rule['m2_per_pallet'] : 35.0;
-                        $calculatedPallets = ceil($qty / $m2PerPallet);
-
-                        if ($calculatedPallets <= $rule['max_pallets']) {
-                            $this->debugInfo['matched_rule'] = $rule;
-                            $this->debugInfo['steps'][] = "Matched rule: Max Pallets {$rule['max_pallets']} (Calculated: $calculatedPallets)";
-
-                            // Single selection from rules
-                            $rawSize = $rule['vehicle_size'];
-                            if ($rawSize) {
-                                $vehicleSizes = [$rawSize];
-                            }
-
-                            $rawBody = $rule['vehicle_bodies'];
-                            if ($rawBody) {
-                                $requiredTruckBodies = [$rawBody];
-                            }
-
-                            if (isset($rule['freight_type']) && $rule['freight_type']) {
-                                $ruleFreightType = $rule['freight_type'];
-                            }
-
-                            if (isset($rule['pallet_length']) && $rule['pallet_length'] > 0) {
-                                $rulePalletLength = (float)$rule['pallet_length'];
-                            }
-                            if (isset($rule['pallet_width']) && $rule['pallet_width'] > 0) {
-                                $rulePalletWidth = (float)$rule['pallet_width'];
-                            }
-
-                            $palletsCount = $calculatedPallets;
-                            break;
-                        }
-                    }
-                } catch (\Exception $e) {
-                    $this->logger->error("Trans.eu Rules Error: " . $e->getMessage());
-                    $this->debugInfo['steps'][] = "Error processing rules: " . $e->getMessage();
-                }
-            }
-
-            // Fallback to carrier config if no rule matched
-            if (empty($vehicleSizes)) {
-                $this->debugInfo['steps'][] = "No rule matched. Using fallback configuration.";
-                // Default fallback calculation
-                $m2PerPallet = 35.0;
-                $palletsCount = ceil($qty / $m2PerPallet);
-
-                $rawSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
-                if ($rawSize) {
-                    $vehicleSizes = explode(',', $rawSize);
-                }
-
-                $vehicleBody = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_body');
-                if ($vehicleBody) {
-                    $requiredTruckBodies = explode(',', $vehicleBody);
-                }
-            }
-
-            if (empty($requiredTruckBodies) || empty($vehicleSizes)) {
-                $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode (Qty: $qty m2)");
-                $this->debugInfo['steps'][] = "Missing vehicle configuration.";
+            if (!$resolved['success']) {
                 return null;
             }
 
-            // Resolve combined vehicle size ID
-            $finalVehicleSizeId = $this->resolveVehicleSizeId($vehicleSizes);
-            if (!$finalVehicleSizeId) {
-                $this->logger->warning("Trans.eu: Could not resolve vehicle size ID for " . implode(',', $vehicleSizes));
-                $this->debugInfo['steps'][] = "Could not resolve vehicle size ID.";
-                return null;
-            }
-
-            // Calculate weight
-            $weightPerM2 = 25.0; // 25kg per m2
-            $targetSku = $this->scopeConfig->getValue($configPath . 'target_sku') ?: 'GARDENLAWNS001';
-            try {
-                $product = $this->productRepository->get($targetSku);
-                if ($product->getWeight() > 0) {
-                    $weightPerM2 = (float)$product->getWeight();
-                }
-            } catch (\Exception $e) {
-                $this->logger->warning("Trans.eu: Product not found for weight calculation: $targetSku");
-            }
-
-            $totalWeightKg = $qty * $weightPerM2;
-            $capacityTons = ceil($totalWeightKg / 1000);
-            if ($capacityTons < 1) $capacityTons = 1;
-
-            $freightType = $ruleFreightType ?: ($this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl');
-            $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';
-
-            // Calculate LDM
-            $dims = $this->getLoadDimensions($loadType);
-            $loadLength = $rulePalletLength ?: $dims['length'];
-            $loadWidth = $rulePalletWidth ?: $dims['width'];
-
-            // Formula: (Quantity * Length * Width) / 2.4
-            $totalLdm = ($palletsCount * $loadLength * $loadWidth) / 2.4;
-            $totalLdm = max(0.1, round($totalLdm, 1));
-
-            // Other requirements
-            $otherRequirements = [];
-            $otherReqConfig = $this->scopeConfig->getValue($configPath . 'transeu_other_requirements');
-            if ($otherReqConfig) {
-                $otherRequirements = explode(',', $otherReqConfig);
-            }
+            $params = $resolved['params'];
 
             $this->debugInfo['vehicle_params'] = [
-                'size_id' => $finalVehicleSizeId,
-                'bodies' => $requiredTruckBodies,
-                'freight_type' => $freightType,
-                'capacity_tons' => $capacityTons,
-                'other_req' => $otherRequirements
+                'size_id' => $params['vehicle_size_id'],
+                'bodies' => $params['vehicle_bodies'],
+                'freight_type' => $params['freight_type'],
+                'capacity_tons' => $params['capacity_tons'],
+                'other_req' => $params['other_requirements']
             ];
 
             $this->debugInfo['load_params'] = [
-                'pallets_count' => $palletsCount,
-                'load_type' => $loadType,
-                'pallet_dims' => "$loadLength x $loadWidth",
-                'total_ldm' => $totalLdm,
-                'total_weight_kg' => $totalWeightKg
+                'pallets_count' => $params['load_amount'],
+                'load_type' => $params['load_type'],
+                'pallet_dims' => "{$params['load_length']} x {$params['load_width']}",
+                'total_ldm' => $params['total_ldm']
             ];
 
             // Get coordinates
@@ -250,7 +278,7 @@ class TransEuQuoteService
                 'dest' => $destCoords
             ];
 
-            // 4. Build Request
+            // Build Request
             /** @var \GardenLawn\TransEu\Model\Data\PricePredictionRequest $requestModel */
             $requestModel = $this->requestFactory->create();
 
@@ -270,11 +298,11 @@ class TransEuQuoteService
             };
 
             $defaultLoad = [
-                "amount" => $palletsCount,
-                "length" => $loadLength,
+                "amount" => $params['load_amount'],
+                "length" => $params['load_length'],
                 "name" => "Trawa w rolce ($qty m2)",
-                "type_of_load" => $loadType,
-                "width" => $loadWidth,
+                "type_of_load" => $params['load_type'],
+                "width" => $params['load_width'],
             ];
 
             $spots = [
@@ -315,24 +343,23 @@ class TransEuQuoteService
             $requestModel->setSpots($spots);
 
             $vehicleRequirements = [
-                "capacity" => $capacityTons,
+                "capacity" => $params['capacity_tons'],
                 "gps" => true,
-                "other_requirements" => $otherRequirements,
-                "required_truck_bodies" => $requiredTruckBodies,
+                "other_requirements" => $params['other_requirements'],
+                "required_truck_bodies" => $params['vehicle_bodies'],
                 "required_ways_of_loading" => [],
-                "vehicle_size_id" => $finalVehicleSizeId,
-                "transport_type" => $freightType
+                "vehicle_size_id" => $params['vehicle_size_id'],
+                "transport_type" => $params['freight_type']
             ];
             $requestModel->setVehicleRequirements($vehicleRequirements);
-            $requestModel->setData('length', $totalLdm);
+            $requestModel->setData('length', $params['total_ldm']);
 
             $this->debugInfo['request_payload'] = $requestModel->toArray();
 
-            // 5. Call API
+            // Call API
             $response = $this->apiService->predictPrice($requestModel);
             $this->debugInfo['api_response'] = $response;
 
-            // 6. Convert Currency and Apply Factor
             if (isset($response['prediction'][0]) && isset($response['currency']) && $response['currency'] == 'EUR') {
                 $priceEur = $response['prediction'][0];
                 $finalPrice = $this->convertEurToStoreCurrency($priceEur * $priceFactor);

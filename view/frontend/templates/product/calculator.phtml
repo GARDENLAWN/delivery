@@ -114,29 +114,34 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
             </div>
 
             <h4 class="text-sm font-semibold text-gray-900 mb-2"><?= $block->escapeHtml(__('Available Delivery Methods')) ?></h4>
-            <div class="space-y-2">
-                <template x-for="(cost, index) in shippingCosts" :key="cost.method">
-                    <label class="flex items-start justify-between p-3 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
-                           :class="selectedMethodIndex === index ? 'border-primary bg-blue-50 ring-1 ring-primary' : 'border-gray-200 bg-white'">
-                        <div class="flex items-start gap-3">
-                            <input type="radio" name="delivery_method" :value="index" x-model="selectedMethodIndex" class="text-primary focus:ring-primary mt-1">
-                            <div class="w-full">
-                                <span class="text-sm font-medium text-gray-900 block" x-text="cost.method"></span>
-                                <span class="text-xs text-gray-500 block mt-1" x-show="cost.description" x-text="cost.description"></span>
+            <div class="space-y-4">
+                <template x-for="(group, groupName) in groupedShippingCosts" :key="groupName">
+                    <div class="space-y-2">
+                        <h5 class="text-sm font-bold text-gray-800 border-b pb-1 mb-2" x-text="groupName"></h5>
+                        <template x-for="(cost, index) in group" :key="cost.code">
+                            <label class="flex items-start justify-between p-3 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+                                   :class="selectedMethodCode === cost.code ? 'border-primary bg-blue-50 ring-1 ring-primary' : 'border-gray-200 bg-white'">
+                                <div class="flex items-start gap-3">
+                                    <input type="radio" name="delivery_method" :value="cost.code" x-model="selectedMethodCode" class="text-primary focus:ring-primary mt-1">
+                                    <div class="w-full">
+                                        <span class="text-sm font-medium text-gray-900 block" x-text="cost.method"></span>
+                                        <span class="text-xs text-gray-500 block mt-1" x-show="cost.description" x-text="cost.description"></span>
 
-                                <!-- Promotion Message -->
-                                <div x-show="cost.promotion_message" class="mt-2 p-2 text-xs rounded"
-                                     style="border: 1px solid #fcd34d; background-color: #fffbeb; color: #92400e;">
-                                    <strong class="block mb-1"><?= $block->escapeHtml(__('Special offer (included in cart):')) ?></strong>
-                                    <span x-html="cost.promotion_message"></span>
+                                        <!-- Promotion Message -->
+                                        <div x-show="cost.promotion_message" class="mt-2 p-2 text-xs rounded"
+                                             style="border: 1px solid #fcd34d; background-color: #fffbeb; color: #92400e;">
+                                            <strong class="block mb-1"><?= $block->escapeHtml(__('Special offer (included in cart):')) ?></strong>
+                                            <span x-html="cost.promotion_message"></span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-sm font-bold text-gray-900 whitespace-nowrap block" x-text="cost.formatted_price_gross || cost.formatted_price"></span>
-                            <span class="text-xs text-gray-500 whitespace-nowrap block" x-show="cost.formatted_price_net" x-text="cost.formatted_price_net + ' <?= $block->escapeJs(__('netto')) ?>'"></span>
-                        </div>
-                    </label>
+                                <div class="text-right">
+                                    <span class="text-sm font-bold text-gray-900 whitespace-nowrap block" x-text="cost.formatted_price_gross || cost.formatted_price"></span>
+                                    <span class="text-xs text-gray-500 whitespace-nowrap block" x-show="cost.formatted_price_net" x-text="cost.formatted_price_net + ' <?= $block->escapeJs(__('netto')) ?>'"></span>
+                                </div>
+                            </label>
+                        </template>
+                    </div>
                 </template>
             </div>
 
@@ -188,7 +193,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
             distance: '',
             duration: '',
             calculated: false,
-            selectedMethodIndex: 0,
+            selectedMethodCode: '',
 
             init() {
                 // Listen for Hyva qty update event
@@ -242,24 +247,38 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                 return this.qty * this.activePrice;
             },
 
-            get selectedDeliveryCost() {
-                if (this.shippingCosts.length > 0 && this.shippingCosts[this.selectedMethodIndex]) {
-                    // Use gross price for total calculation if available
-                    if (this.shippingCosts[this.selectedMethodIndex].price_details && this.shippingCosts[this.selectedMethodIndex].price_details.gross) {
-                         return parseFloat(this.shippingCosts[this.selectedMethodIndex].price_details.gross);
+            get groupedShippingCosts() {
+                const groups = {};
+                this.shippingCosts.forEach(cost => {
+                    const title = cost.carrier_title || '<?= $block->escapeJs(__('Other Delivery Methods')) ?>';
+                    if (!groups[title]) {
+                        groups[title] = [];
                     }
-                    // Fallback to price (which is net in our logic, but maybe we should add tax here too?
-                    // Wait, calculateShippingCosts returns formatted_price_gross which is calculated.
-                    // But here we need float value.
-                    // Let's assume price is what we want for total if no details.
-                    return parseFloat(this.shippingCosts[this.selectedMethodIndex].price);
+                    groups[title].push(cost);
+                });
+                return groups;
+            },
+
+            get selectedCost() {
+                return this.shippingCosts.find(c => c.code === this.selectedMethodCode);
+            },
+
+            get selectedDeliveryCost() {
+                const cost = this.selectedCost;
+                if (cost) {
+                    // Use gross price for total calculation if available
+                    if (cost.price_details && cost.price_details.gross) {
+                         return parseFloat(cost.price_details.gross);
+                    }
+                    return parseFloat(cost.price);
                 }
                 return 0;
             },
 
             get selectedDeliveryCostFormatted() {
-                if (this.shippingCosts.length > 0 && this.shippingCosts[this.selectedMethodIndex]) {
-                    return this.shippingCosts[this.selectedMethodIndex].formatted_price_gross || this.shippingCosts[this.selectedMethodIndex].formatted_price;
+                const cost = this.selectedCost;
+                if (cost) {
+                    return cost.formatted_price_gross || cost.formatted_price;
                 }
                 return '-';
             },
@@ -292,7 +311,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                 this.error = null;
                 this.shippingCosts = [];
                 this.calculated = false;
-                this.selectedMethodIndex = 0;
+                this.selectedMethodCode = '';
 
                 fetch('<?= $block->getUrl('delivery/calculator/calculate') ?>', {
                     method: 'POST',
@@ -316,7 +335,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
 
                         // Auto-select first method
                         if (this.shippingCosts.length > 0) {
-                            this.selectedMethodIndex = 0;
+                            this.selectedMethodCode = this.shippingCosts[0].code;
                         }
                     } else {
                         this.error = data.message || '<?= $block->escapeJs(__('Error calculating delivery.')) ?>';

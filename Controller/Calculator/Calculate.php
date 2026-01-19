@@ -106,6 +106,7 @@ class Calculate implements HttpPostActionInterface, CsrfAwareActionInterface
                         $shippingCosts[] = [
                             'code' => $cost['code'], // Ensure code is passed
                             'method' => $cost['method'],
+                            'carrier_title' => $cost['carrier_title'] ?? '',
                             'description' => $cost['description'] ?? '',
                             'price' => $cost['price'],
                             'formatted_price' => $this->pricingHelper->currency($cost['price'], true, false),

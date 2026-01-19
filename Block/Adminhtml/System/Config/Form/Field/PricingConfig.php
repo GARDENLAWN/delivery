@@ -30,6 +30,31 @@ class PricingConfig extends AbstractFieldArray
         $this->_addButtonLabel = __('Add Tier');
     }
 
+    /**
+     * Prepare existing row data object
+     * Handles compatibility with old JSON format {"tiers": [...]}
+     *
+     * @return array
+     */
+    public function getArrayRows()
+    {
+        $element = $this->getElement();
+        $value = $element->getValue();
+
+        // Fix for old JSON format {"tiers": [...]}
+        if (is_array($value) && isset($value['tiers']) && is_array($value['tiers'])) {
+            $newValue = [];
+            foreach ($value['tiers'] as $tier) {
+                // Generate a unique ID for the row to satisfy ArraySerialized requirements
+                $id = '_row_' . uniqid();
+                $newValue[$id] = $tier;
+            }
+            $element->setValue($newValue);
+        }
+
+        return parent::getArrayRows();
+    }
+
     protected function getTypeRenderer()
     {
         if (!$this->typeRenderer) {

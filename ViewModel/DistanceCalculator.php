@@ -20,6 +20,7 @@ use Magento\Quote\Model\Quote\AddressFactory;
 use Magento\Quote\Model\Quote\ItemFactory;
 use Magento\Quote\Model\QuoteFactory;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Tax\Model\Calculation;
 
 class DistanceCalculator implements ArgumentInterface
 {
@@ -39,6 +40,7 @@ class DistanceCalculator implements ArgumentInterface
     private ItemFactory $itemFactory;
     private QuoteFactory $quoteFactory;
     private StoreManagerInterface $storeManager;
+    private Calculation $taxCalculation;
 
     // Cache for distances within request to avoid duplicate API calls
     private array $distanceCache = [];
@@ -59,7 +61,8 @@ class DistanceCalculator implements ArgumentInterface
         AddressFactory $addressFactory,
         ItemFactory $itemFactory,
         QuoteFactory $quoteFactory,
-        StoreManagerInterface $storeManager
+        StoreManagerInterface $storeManager,
+        Calculation $taxCalculation
     ) {
         $this->config = $config;
         $this->curl = $curl;
@@ -77,6 +80,7 @@ class DistanceCalculator implements ArgumentInterface
         $this->itemFactory = $itemFactory;
         $this->quoteFactory = $quoteFactory;
         $this->storeManager = $storeManager;
+        $this->taxCalculation = $taxCalculation;
     }
 
     public function isEnabled(): bool
@@ -145,6 +149,15 @@ class DistanceCalculator implements ArgumentInterface
         $costs = [];
         $defaultOrigin = $this->getDefaultOrigin();
 
+        // Get Tax Rate
+        $taxClassId = $this->scopeConfig->getValue('tax/classes/shipping_tax_class');
+        $taxRate = 0;
+        if ($taxClassId) {
+            $request = $this->taxCalculation->getRateRequest(null, null, null, $this->storeManager->getStore());
+            $request->setProductClassId($taxClassId);
+            $taxRate = $this->taxCalculation->getRate($request);
+        }
+
         if ($this->courierShipping->getConfigFlag('active')) {
             $price = $this->courierShipping->calculatePrice($qty);
             if ($price > 0) {
@@ -153,7 +166,7 @@ class DistanceCalculator implements ArgumentInterface
                     'method' => __($this->courierShipping->getConfigData('name')),
                     'description' => __($this->courierShipping->getConfigData('description')),
                     'price' => $price,
-                    'source' => 'table' // Courier is always table/logic based
+                    'source' => 'table'
                 ];
             }
         }
@@ -203,6 +216,20 @@ class DistanceCalculator implements ArgumentInterface
 
         $cost = $processDirectMethod($this->directForklift, 'direct_forklift');
         if ($cost) $costs[] = $cost;
+
+        // Add formatted prices (Net & Gross)
+        foreach ($costs as &$costItem) {
+            $priceNet = $costItem['price'];
+            $priceGross = $priceNet * (1 + $taxRate / 100);
+
+            // If price_details exists (from Trans.eu), use its gross value for accuracy
+            if (!empty($costItem['price_details']['gross'])) {
+                $priceGross = $costItem['price_details']['gross'];
+            }
+
+            $costItem['formatted_price_net'] = $this->storeManager->getStore()->getCurrentCurrency()->format($priceNet, [], false);
+            $costItem['formatted_price_gross'] = $this->storeManager->getStore()->getCurrentCurrency()->format($priceGross, [], false);
+        }
 
         return $costs;
     }

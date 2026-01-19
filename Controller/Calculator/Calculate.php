@@ -109,6 +109,8 @@ class Calculate implements HttpPostActionInterface, CsrfAwareActionInterface
                             'description' => $cost['description'] ?? '',
                             'price' => $cost['price'],
                             'formatted_price' => $this->pricingHelper->currency($cost['price'], true, false),
+                            'formatted_price_net' => $cost['formatted_price_net'] ?? null,
+                            'formatted_price_gross' => $cost['formatted_price_gross'] ?? null,
                             'distance' => isset($cost['distance']) ? round($cost['distance'], 1) . ' km' : null,
                             'source' => $cost['source'] ?? null,
                             'price_details' => $cost['price_details'] ?? null,

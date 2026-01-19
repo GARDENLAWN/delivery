@@ -132,7 +132,10 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                                 </div>
                             </div>
                         </div>
-                        <span class="text-sm font-bold text-gray-900 whitespace-nowrap" x-text="cost.formatted_price"></span>
+                        <div class="text-right">
+                            <span class="text-sm font-bold text-gray-900 whitespace-nowrap block" x-text="cost.formatted_price_gross || cost.formatted_price"></span>
+                            <span class="text-xs text-gray-500 whitespace-nowrap block" x-show="cost.formatted_price_net" x-text="cost.formatted_price_net + ' <?= $block->escapeJs(__('netto')) ?>'"></span>
+                        </div>
                     </label>
                 </template>
             </div>
@@ -241,6 +244,14 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
 
             get selectedDeliveryCost() {
                 if (this.shippingCosts.length > 0 && this.shippingCosts[this.selectedMethodIndex]) {
+                    // Use gross price for total calculation if available
+                    if (this.shippingCosts[this.selectedMethodIndex].price_details && this.shippingCosts[this.selectedMethodIndex].price_details.gross) {
+                         return parseFloat(this.shippingCosts[this.selectedMethodIndex].price_details.gross);
+                    }
+                    // Fallback to price (which is net in our logic, but maybe we should add tax here too?
+                    // Wait, calculateShippingCosts returns formatted_price_gross which is calculated.
+                    // But here we need float value.
+                    // Let's assume price is what we want for total if no details.
                     return parseFloat(this.shippingCosts[this.selectedMethodIndex].price);
                 }
                 return 0;
@@ -248,7 +259,7 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
 
             get selectedDeliveryCostFormatted() {
                 if (this.shippingCosts.length > 0 && this.shippingCosts[this.selectedMethodIndex]) {
-                    return this.shippingCosts[this.selectedMethodIndex].formatted_price;
+                    return this.shippingCosts[this.selectedMethodIndex].formatted_price_gross || this.shippingCosts[this.selectedMethodIndex].formatted_price;
                 }
                 return '-';
             },

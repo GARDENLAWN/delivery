@@ -20,6 +20,7 @@ class TransEuQuoteService
     protected $productRepository;
     protected $logger;
     protected $json;
+    protected $distanceService;
 
     protected $loadDimensions = [
         '2_europalette' => ['length' => 1.2, 'width' => 0.8],
@@ -40,7 +41,8 @@ class TransEuQuoteService
         StoreManagerInterface $storeManager,
         ProductRepositoryInterface $productRepository,
         LoggerInterface $logger,
-        Json $json
+        Json $json,
+        DistanceService $distanceService
     ) {
         $this->apiService = $apiService;
         $this->requestFactory = $requestFactory;
@@ -50,6 +52,7 @@ class TransEuQuoteService
         $this->productRepository = $productRepository;
         $this->logger = $logger;
         $this->json = $json;
+        $this->distanceService = $distanceService;
     }
 
     /**
@@ -84,6 +87,7 @@ class TransEuQuoteService
             $palletsCount = 0;
             $rulePalletLength = null;
             $rulePalletWidth = null;
+            $ruleFreightType = null;
 
             if ($vehicleRulesJson) {
                 try {
@@ -98,16 +102,19 @@ class TransEuQuoteService
                         $calculatedPallets = ceil($qty / $m2PerPallet);
 
                         if ($calculatedPallets <= $rule['max_pallets']) {
+                            // Single selection from rules
                             $rawSize = $rule['vehicle_size'];
-                            if (is_array($rawSize)) {
-                                $vehicleSizes = $rawSize;
-                            } elseif (is_string($rawSize)) {
-                                $vehicleSizes = explode(',', $rawSize);
+                            if ($rawSize) {
+                                $vehicleSizes = [$rawSize];
                             }
 
-                            $requiredTruckBodies = $rule['vehicle_bodies'];
-                            if (!is_array($requiredTruckBodies)) {
-                                $requiredTruckBodies = [$requiredTruckBodies];
+                            $rawBody = $rule['vehicle_bodies'];
+                            if ($rawBody) {
+                                $requiredTruckBodies = [$rawBody];
+                            }
+
+                            if (isset($rule['freight_type']) && $rule['freight_type']) {
+                                $ruleFreightType = $rule['freight_type'];
                             }
 
                             if (isset($rule['pallet_length']) && $rule['pallet_length'] > 0) {
@@ -171,7 +178,7 @@ class TransEuQuoteService
             $capacityTons = ceil($totalWeightKg / 1000);
             if ($capacityTons < 1) $capacityTons = 1;
 
-            $freightType = $this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl';
+            $freightType = $ruleFreightType ?: ($this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl');
             $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';
 
             // Calculate LDM
@@ -189,6 +196,10 @@ class TransEuQuoteService
             if ($otherReqConfig) {
                 $otherRequirements = explode(',', $otherReqConfig);
             }
+
+            // Get coordinates
+            $originCoords = $this->distanceService->getCoordinates($originAddress);
+            $destCoords = $this->distanceService->getCoordinates($destinationAddress);
 
             // 4. Build Request
             /** @var \GardenLawn\TransEu\Model\Data\PricePredictionRequest $requestModel */
@@ -222,7 +233,10 @@ class TransEuQuoteService
                     "operations" => [["loads" => [$defaultLoad]]],
                     "place" => [
                         "address" => ["locality" => $originParts['city'], "postal_code" => $originParts['zip']],
-                        "coordinates" => ["latitude" => 0, "longitude" => 0],
+                        "coordinates" => [
+                            "latitude" => $originCoords['lat'] ?? 0,
+                            "longitude" => $originCoords['lng'] ?? 0
+                        ],
                         "country" => "PL"
                     ],
                     "timespans" => [
@@ -235,7 +249,10 @@ class TransEuQuoteService
                     "operations" => [["loads" => [$defaultLoad]]],
                     "place" => [
                         "address" => ["locality" => $destParts['city'], "postal_code" => $destParts['zip']],
-                        "coordinates" => ["latitude" => 0, "longitude" => 0],
+                        "coordinates" => [
+                            "latitude" => $destCoords['lat'] ?? 0,
+                            "longitude" => $destCoords['lng'] ?? 0
+                        ],
                         "country" => "PL"
                     ],
                     "timespans" => [

@@ -9,6 +9,7 @@ use Psr\Log\LoggerInterface;
 class DistanceService
 {
     private const GOOGLE_MAPS_API_URL = 'https://maps.googleapis.com/maps/api/distancematrix/json';
+    private const GOOGLE_GEOCODING_API_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
     private const HERE_API_URL = 'https://router.hereapi.com/v8/routes';
 
     protected ScopeConfigInterface $scopeConfig;
@@ -41,6 +42,28 @@ class DistanceService
         }
 
         return $this->getDistanceFromGoogle($origin, $destination);
+    }
+
+    /**
+     * Get coordinates for an address using configured provider
+     *
+     * @param string $address
+     * @return array|null ['lat' => float, 'lng' => float] or null
+     */
+    public function getCoordinates(string $address): ?array
+    {
+        $provider = $this->scopeConfig->getValue('delivery/api_provider/provider');
+
+        if ($provider === 'here') {
+            $coordsStr = $this->geocodeAddressHere($address);
+            if ($coordsStr) {
+                list($lat, $lng) = explode(',', $coordsStr);
+                return ['lat' => (float)$lat, 'lng' => (float)$lng];
+            }
+            return null;
+        }
+
+        return $this->geocodeAddressGoogle($address);
     }
 
     /**
@@ -87,6 +110,43 @@ class DistanceService
     }
 
     /**
+     * Geocode address using Google Maps Geocoding API
+     *
+     * @param string $address
+     * @return array|null
+     */
+    private function geocodeAddressGoogle(string $address): ?array
+    {
+        try {
+            $apiKey = $this->scopeConfig->getValue('delivery/api_provider/google_maps_api_key');
+            if (!$apiKey) {
+                return null;
+            }
+
+            $url = self::GOOGLE_GEOCODING_API_URL . '?' . http_build_query([
+                'address' => $address,
+                'key' => $apiKey
+            ]);
+
+            $this->curl->get($url);
+            $response = $this->curl->getBody();
+            $data = json_decode($response, true);
+
+            if (!$data || !isset($data['status']) || $data['status'] !== 'OK') {
+                return null;
+            }
+
+            if (isset($data['results'][0]['geometry']['location'])) {
+                $loc = $data['results'][0]['geometry']['location'];
+                return ['lat' => (float)$loc['lat'], 'lng' => (float)$loc['lng']];
+            }
+        } catch (\Exception $e) {
+            $this->logger->error('DistanceService Google Geocode: ' . $e->getMessage());
+        }
+        return null;
+    }
+
+    /**
      * Get distance using HERE Routing API v8
      *
      * @param string $origin
@@ -103,8 +163,8 @@ class DistanceService
             }
 
             // Geocode addresses to coordinates
-            $originCoords = $this->geocodeAddress($origin);
-            $destCoords = $this->geocodeAddress($destination);
+            $originCoords = $this->geocodeAddressHere($origin);
+            $destCoords = $this->geocodeAddressHere($destination);
 
             if (!$originCoords || !$destCoords) {
                 $this->logger->warning('DistanceService: Failed to geocode addresses');
@@ -156,7 +216,7 @@ class DistanceService
      * @param string $address
      * @return string|null Format: "lat,lng"
      */
-    private function geocodeAddress(string $address): ?string
+    private function geocodeAddressHere(string $address): ?string
     {
         try {
             $apiKey = $this->scopeConfig->getValue('delivery/api_provider/here_api_key');

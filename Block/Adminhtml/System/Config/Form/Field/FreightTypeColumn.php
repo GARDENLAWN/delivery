@@ -2,19 +2,19 @@
 namespace GardenLawn\Delivery\Block\Adminhtml\System\Config\Form\Field;
 
 use Magento\Framework\View\Element\Html\Select;
-use GardenLawn\Delivery\Model\Config\Source\VehicleSize;
+use GardenLawn\Delivery\Model\Config\Source\FreightType;
 
-class VehicleSizeColumn extends Select
+class FreightTypeColumn extends Select
 {
-    protected $vehicleSizeSource;
+    protected $freightTypeSource;
 
     public function __construct(
         \Magento\Framework\View\Element\Context $context,
-        VehicleSize $vehicleSizeSource,
+        FreightType $freightTypeSource,
         array $data = []
     ) {
         parent::__construct($context, $data);
-        $this->vehicleSizeSource = $vehicleSizeSource;
+        $this->freightTypeSource = $freightTypeSource;
     }
 
     public function setInputName($value)
@@ -25,9 +25,9 @@ class VehicleSizeColumn extends Select
     public function _toHtml()
     {
         if (!$this->getOptions()) {
-            $this->setOptions($this->vehicleSizeSource->toOptionArray());
+            $this->setOptions($this->freightTypeSource->toOptionArray());
         }
-        $this->setExtraParams('style="width: 180px;"');
+        $this->setExtraParams('style="width: 120px;"');
         return parent::_toHtml();
     }
 }

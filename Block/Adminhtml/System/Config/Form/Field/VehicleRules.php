@@ -9,6 +9,7 @@ class VehicleRules extends AbstractFieldArray
 {
     protected $vehicleSizeRenderer;
     protected $vehicleBodyRenderer;
+    protected $freightTypeRenderer;
 
     protected function _prepareToRender()
     {
@@ -31,6 +32,11 @@ class VehicleRules extends AbstractFieldArray
             'label' => __('Pallet Width (m)'),
             'class' => 'validate-number',
             'style' => 'width: 60px'
+        ]);
+        $this->addColumn('freight_type', [
+            'label' => __('Freight Type'),
+            'renderer' => $this->getFreightTypeRenderer(),
+            'style' => 'width: 120px'
         ]);
         $this->addColumn('vehicle_size', [
             'label' => __('Vehicle Size'),
@@ -113,33 +119,35 @@ class VehicleRules extends AbstractFieldArray
         return $this->vehicleBodyRenderer;
     }
 
+    protected function getFreightTypeRenderer()
+    {
+        if (!$this->freightTypeRenderer) {
+            $this->freightTypeRenderer = $this->getLayout()->createBlock(
+                \GardenLawn\Delivery\Block\Adminhtml\System\Config\Form\Field\FreightTypeColumn::class,
+                '',
+                ['data' => ['is_render_to_js_template' => true]]
+            );
+        }
+        return $this->freightTypeRenderer;
+    }
+
     protected function _prepareArrayRow(DataObject $row)
     {
         $options = [];
 
         $vehicleSize = $row->getVehicleSize();
         if ($vehicleSize !== null) {
-            // Handle multiselect array or single value
-            $selectedSizes = is_array($vehicleSize) ? $vehicleSize : explode(',', (string)$vehicleSize);
-            foreach ($selectedSizes as $size) {
-                if (is_string($size) || is_numeric($size)) {
-                    $options['option_' . $this->getVehicleSizeRenderer()->calcOptionHash($size)] = 'selected="selected"';
-                }
-            }
+            $options['option_' . $this->getVehicleSizeRenderer()->calcOptionHash($vehicleSize)] = 'selected="selected"';
         }
 
         $vehicleBody = $row->getVehicleBodies();
         if ($vehicleBody !== null) {
-            // Handle potential array if it was saved as such
-            if (is_array($vehicleBody)) {
-                foreach ($vehicleBody as $body) {
-                    if (is_string($body) || is_numeric($body)) {
-                        $options['option_' . $this->getVehicleBodyRenderer()->calcOptionHash($body)] = 'selected="selected"';
-                    }
-                }
-            } else {
-                $options['option_' . $this->getVehicleBodyRenderer()->calcOptionHash($vehicleBody)] = 'selected="selected"';
-            }
+            $options['option_' . $this->getVehicleBodyRenderer()->calcOptionHash($vehicleBody)] = 'selected="selected"';
+        }
+
+        $freightType = $row->getFreightType();
+        if ($freightType !== null) {
+            $options['option_' . $this->getFreightTypeRenderer()->calcOptionHash($freightType)] = 'selected="selected"';
         }
 
         $row->setData('option_extra_attrs', $options);

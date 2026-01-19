@@ -20,6 +20,7 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
     protected MethodFactory $_rateMethodFactory;
     protected DistanceService $distanceService;
     protected TransEuQuoteService $transEuQuoteService;
+    protected string $lastPriceSource = 'table';
 
     public function __construct(
         ScopeConfigInterface $scopeConfig,
@@ -56,12 +57,19 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
         return (string)$this->_scopeConfig->getValue('delivery/general/warehouse_origin');
     }
 
+    public function getLastPriceSource(): string
+    {
+        return $this->lastPriceSource;
+    }
+
     /**
      * Calculate price for given distance and quantity
      * Returns 0.0 if method is not applicable (e.g. max qty exceeded)
      */
     public function calculatePrice(float $distance, float $qty, string $destination = '', string $origin = ''): float
     {
+        $this->lastPriceSource = 'table';
+
         if (!$this->getConfigFlag('active')) {
             return 0.0;
         }
@@ -86,6 +94,7 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
             );
 
             if ($transEuPrice !== null) {
+                $this->lastPriceSource = 'transeu';
                 return $transEuPrice;
             }
         }

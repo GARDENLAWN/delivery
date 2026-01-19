@@ -27,6 +27,7 @@ class TransEuQuoteService
     protected $taxConfig;
 
     protected $debugInfo = [];
+    protected $lastPriceDetails = [];
     protected static $lastRequestTime = 0.0;
 
     protected $loadDimensions = [
@@ -69,6 +70,11 @@ class TransEuQuoteService
     public function getDebugInfo()
     {
         return $this->debugInfo;
+    }
+
+    public function getLastPriceDetails()
+    {
+        return $this->lastPriceDetails;
     }
 
     /**
@@ -243,6 +249,7 @@ class TransEuQuoteService
             'api_response' => null,
             'price_calculation' => []
         ];
+        $this->lastPriceDetails = [];
 
         try {
             $configPath = "carriers/$carrierCode/";
@@ -391,7 +398,7 @@ class TransEuQuoteService
             $currentTime = microtime(true);
             $timeSinceLast = $currentTime - self::$lastRequestTime;
             if ($timeSinceLast < 1.0) {
-                $sleepTime = (1.0 - $timeSinceLast) * 1000; // microseconds
+                $sleepTime = (1.0 - $timeSinceLast) * 1000000; // microseconds
                 usleep((int)$sleepTime);
             }
             self::$lastRequestTime = microtime(true);
@@ -430,6 +437,12 @@ class TransEuQuoteService
                     'gross_calculated' => $grossPrice,
                     'gross_rounded' => $grossPriceRounded,
                     'final_net_price' => $finalNetPrice
+                ];
+
+                $this->lastPriceDetails = [
+                    'net' => $finalNetPrice,
+                    'gross' => $grossPriceRounded,
+                    'tax_rate' => $taxRate
                 ];
 
                 return (float)$finalNetPrice;

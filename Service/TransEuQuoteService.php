@@ -68,7 +68,7 @@ class TransEuQuoteService
 
             // 3. Determine Vehicle from Rules
             $vehicleRulesJson = $this->scopeConfig->getValue('delivery/trans_eu_rules/vehicle_rules');
-            $vehicleSize = null;
+            $vehicleSizes = [];
             $requiredTruckBodies = [];
             $palletsCount = 0;
 
@@ -85,13 +85,11 @@ class TransEuQuoteService
                         $calculatedPallets = ceil($qty / $m2PerPallet);
 
                         if ($calculatedPallets <= $rule['max_pallets']) {
-                            $vehicleSize = $rule['vehicle_size'];
-                            // Handle multiselect in rules
-                            if (is_array($vehicleSize)) {
-                                $vehicleSize = reset($vehicleSize);
-                            } elseif (strpos($vehicleSize, ',') !== false) {
-                                $parts = explode(',', $vehicleSize);
-                                $vehicleSize = reset($parts);
+                            $rawSize = $rule['vehicle_size'];
+                            if (is_array($rawSize)) {
+                                $vehicleSizes = $rawSize;
+                            } elseif (is_string($rawSize)) {
+                                $vehicleSizes = explode(',', $rawSize);
                             }
 
                             $requiredTruckBodies = $rule['vehicle_bodies'];
@@ -109,15 +107,14 @@ class TransEuQuoteService
             }
 
             // Fallback to carrier config if no rule matched
-            if (!$vehicleSize) {
+            if (empty($vehicleSizes)) {
                 // Default fallback calculation
                 $m2PerPallet = 35.0;
                 $palletsCount = ceil($qty / $m2PerPallet);
 
-                $vehicleSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
-                if ($vehicleSize) {
-                    $parts = explode(',', $vehicleSize);
-                    $vehicleSize = reset($parts);
+                $rawSize = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_size');
+                if ($rawSize) {
+                    $vehicleSizes = explode(',', $rawSize);
                 }
 
                 $vehicleBody = $this->scopeConfig->getValue($configPath . 'transeu_vehicle_body');
@@ -126,8 +123,15 @@ class TransEuQuoteService
                 }
             }
 
-            if (empty($requiredTruckBodies) || !$vehicleSize) {
+            if (empty($requiredTruckBodies) || empty($vehicleSizes)) {
                 $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode (Qty: $qty m2)");
+                return null;
+            }
+
+            // Resolve combined vehicle size ID
+            $finalVehicleSizeId = $this->resolveVehicleSizeId($vehicleSizes);
+            if (!$finalVehicleSizeId) {
+                $this->logger->warning("Trans.eu: Could not resolve vehicle size ID for " . implode(',', $vehicleSizes));
                 return null;
             }
 
@@ -218,7 +222,7 @@ class TransEuQuoteService
                 "other_requirements" => $otherRequirements,
                 "required_truck_bodies" => $requiredTruckBodies,
                 "required_ways_of_loading" => [],
-                "vehicle_size_id" => $vehicleSize,
+                "vehicle_size_id" => $finalVehicleSizeId,
                 "transport_type" => $freightType
             ];
             $requestModel->setVehicleRequirements($vehicleRequirements);
@@ -236,6 +240,39 @@ class TransEuQuoteService
 
         } catch (\Exception $e) {
             $this->logger->error("Trans.eu Quote Error ($carrierCode): " . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    protected function resolveVehicleSizeId(array $sizes)
+    {
+        $sizes = array_map('trim', $sizes);
+        $sizes = array_filter(array_unique($sizes));
+
+        $hasLorry = in_array('3_lorry', $sizes);
+        $hasSolo = in_array('5_solo', $sizes);
+        $hasDouble = in_array('2_double_trailer', $sizes);
+
+        if ($hasLorry && $hasSolo && $hasDouble) {
+            return '14_double_trailer_lorry_solo';
+        }
+        if ($hasLorry && $hasSolo) {
+            return '8_lorry_solo';
+        }
+        if ($hasLorry && $hasDouble) {
+            return '7_double_trailer_lorry';
+        }
+        if ($hasSolo && $hasDouble) {
+            return '11_double_trailer_solo';
+        }
+        if ($hasLorry) return '3_lorry';
+        if ($hasSolo) return '5_solo';
+        if ($hasDouble) return '2_double_trailer';
+
+        // Fallback: if only one size is selected and it's not one of the above (e.g. 1_bus if it was allowed)
+        if (count($sizes) === 1) {
+            return reset($sizes);
         }
 
         return null;

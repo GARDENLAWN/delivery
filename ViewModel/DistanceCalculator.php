@@ -24,7 +24,6 @@ use Magento\Store\Model\StoreManagerInterface;
 class DistanceCalculator implements ArgumentInterface
 {
     private Config $config;
-    private Curl $curl;
     private CourierShipping $courierShipping;
     private DirectNoLift $directNoLift;
     private DirectLift $directLift;
@@ -45,7 +44,6 @@ class DistanceCalculator implements ArgumentInterface
 
     public function __construct(
         Config $config,
-        Curl $curl,
         CourierShipping $courierShipping,
         DirectNoLift $directNoLift,
         DirectLift $directLift,
@@ -62,7 +60,6 @@ class DistanceCalculator implements ArgumentInterface
         StoreManagerInterface $storeManager
     ) {
         $this->config = $config;
-        $this->curl = $curl;
         $this->courierShipping = $courierShipping;
         $this->directNoLift = $directNoLift;
         $this->directLift = $directLift;
@@ -174,7 +171,9 @@ class DistanceCalculator implements ArgumentInterface
                 }
             }
 
-            $price = $method->calculatePrice($distanceKm, $qty);
+            // Pass destination to calculatePrice to enable Trans.eu API
+            $price = $method->calculatePrice($distanceKm, $qty, $destination, $methodOrigin);
+
             if ($price > 0) {
                 return [
                     'code' => $code . '_' . $code,
@@ -352,7 +351,7 @@ class DistanceCalculator implements ArgumentInterface
             . "&key=" . $apiKey;
 
         try {
-            $curl = new \Magento\Framework\HTTP\Client\Curl();
+            $curl = new Curl();
             $curl->get($url);
             $responseBody = $curl->getBody();
             $result = json_decode($responseBody, true);
@@ -444,7 +443,7 @@ class DistanceCalculator implements ArgumentInterface
 
             $url = "https://router.hereapi.com/v8/routes?" . $queryString;
 
-            $curl = new \Magento\Framework\HTTP\Client\Curl();
+            $curl = new Curl();
             $curl->get($url);
             $responseBody = $curl->getBody();
             $result = json_decode($responseBody, true);
@@ -484,7 +483,7 @@ class DistanceCalculator implements ArgumentInterface
         $url = "https://geocode.search.hereapi.com/v1/geocode?q=" . urlencode($address) . "&apiKey=" . $apiKey;
 
         try {
-            $curl = new \Magento\Framework\HTTP\Client\Curl();
+            $curl = new Curl();
             $curl->get($url);
             $responseBody = $curl->getBody();
             $response = json_decode($responseBody, true);

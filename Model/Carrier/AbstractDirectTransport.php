@@ -60,7 +60,7 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
      * Calculate price for given distance and quantity
      * Returns 0.0 if method is not applicable (e.g. max qty exceeded)
      */
-    public function calculatePrice(float $distance, float $qty): float
+    public function calculatePrice(float $distance, float $qty, string $destination = '', string $origin = ''): float
     {
         if (!$this->getConfigFlag('active')) {
             return 0.0;
@@ -69,6 +69,25 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
         $maxQty = (float)$this->getConfigData('max_qty');
         if ($maxQty > 0 && $qty > $maxQty) {
             return 0.0;
+        }
+
+        // Try Trans.eu first if enabled
+        if ($this->getConfigFlag('use_transeu_api') && $destination) {
+            if (!$origin) {
+                $origin = $this->getOrigin();
+            }
+
+            $transEuPrice = $this->transEuQuoteService->getPrice(
+                $this->_code,
+                $origin,
+                $destination,
+                $distance,
+                $qty
+            );
+
+            if ($transEuPrice !== null) {
+                return $transEuPrice;
+            }
         }
 
         return $this->calculateTierPrice($distance);
@@ -149,27 +168,8 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
         }
 
         // 4. Calculate Price
-        $price = 0.0;
-
-        // Try Trans.eu first if enabled
-        if ($this->getConfigFlag('use_transeu_api')) {
-            $transEuPrice = $this->transEuQuoteService->getPrice(
-                $this->_code,
-                $origin,
-                $destination,
-                $distance,
-                $qnt // Pass quantity for weight calculation
-            );
-
-            if ($transEuPrice !== null) {
-                $price = $transEuPrice;
-            }
-        }
-
-        // Fallback to Tier Price if Trans.eu failed or disabled
-        if ($price <= 0) {
-            $price = $this->calculateTierPrice($distance);
-        }
+        // Use the updated calculatePrice method which handles Trans.eu logic internally
+        $price = $this->calculatePrice($distance, $qnt, $destination, $origin);
 
         if ($price <= 0) {
             return false;

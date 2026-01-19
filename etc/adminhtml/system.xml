@@ -322,9 +322,10 @@
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_vehicle_size" translate="label" type="select" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_vehicle_size" translate="label" type="multiselect" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Size ID</label>
                     <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleSize</source_model>
+                    <can_be_empty>1</can_be_empty>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
@@ -406,9 +407,10 @@
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_vehicle_size" translate="label" type="select" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_vehicle_size" translate="label" type="multiselect" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Size ID</label>
                     <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleSize</source_model>
+                    <can_be_empty>1</can_be_empty>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>
@@ -490,9 +492,10 @@
                         <field id="use_transeu_api">1</field>
                     </depends>
                 </field>
-                <field id="transeu_vehicle_size" translate="label" type="select" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                <field id="transeu_vehicle_size" translate="label" type="multiselect" sortOrder="76" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Trans.eu Vehicle Size ID</label>
                     <source_model>GardenLawn\Delivery\Model\Config\Source\VehicleSize</source_model>
+                    <can_be_empty>1</can_be_empty>
                     <depends>
                         <field id="use_transeu_api">1</field>
                     </depends>

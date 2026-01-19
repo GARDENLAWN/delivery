@@ -22,6 +22,8 @@ class TransEuQuoteService
     protected $json;
     protected $distanceService;
 
+    protected $debugInfo = [];
+
     protected $loadDimensions = [
         '2_europalette' => ['length' => 1.2, 'width' => 0.8],
         '34_eur_6' => ['length' => 0.8, 'width' => 0.6],
@@ -55,6 +57,11 @@ class TransEuQuoteService
         $this->distanceService = $distanceService;
     }
 
+    public function getDebugInfo()
+    {
+        return $this->debugInfo;
+    }
+
     /**
      * Get predicted price for delivery
      *
@@ -67,10 +74,24 @@ class TransEuQuoteService
      */
     public function getPrice(string $carrierCode, string $originAddress, string $destinationAddress, float $distanceKm, float $qty)
     {
+        $this->debugInfo = [
+            'carrier' => $carrierCode,
+            'qty_m2' => $qty,
+            'distance_km' => $distanceKm,
+            'steps' => [],
+            'matched_rule' => null,
+            'vehicle_params' => [],
+            'load_params' => [],
+            'request_payload' => null,
+            'api_response' => null,
+            'price_calculation' => []
+        ];
+
         try {
             // 1. Check if enabled for this carrier
             $configPath = "carriers/$carrierCode/";
             if (!$this->scopeConfig->isSetFlag($configPath . 'use_transeu_api')) {
+                $this->debugInfo['steps'][] = "Trans.eu API disabled for this carrier.";
                 return null;
             }
 
@@ -102,6 +123,9 @@ class TransEuQuoteService
                         $calculatedPallets = ceil($qty / $m2PerPallet);
 
                         if ($calculatedPallets <= $rule['max_pallets']) {
+                            $this->debugInfo['matched_rule'] = $rule;
+                            $this->debugInfo['steps'][] = "Matched rule: Max Pallets {$rule['max_pallets']} (Calculated: $calculatedPallets)";
+
                             // Single selection from rules
                             $rawSize = $rule['vehicle_size'];
                             if ($rawSize) {
@@ -130,11 +154,13 @@ class TransEuQuoteService
                     }
                 } catch (\Exception $e) {
                     $this->logger->error("Trans.eu Rules Error: " . $e->getMessage());
+                    $this->debugInfo['steps'][] = "Error processing rules: " . $e->getMessage();
                 }
             }
 
             // Fallback to carrier config if no rule matched
             if (empty($vehicleSizes)) {
+                $this->debugInfo['steps'][] = "No rule matched. Using fallback configuration.";
                 // Default fallback calculation
                 $m2PerPallet = 35.0;
                 $palletsCount = ceil($qty / $m2PerPallet);
@@ -152,6 +178,7 @@ class TransEuQuoteService
 
             if (empty($requiredTruckBodies) || empty($vehicleSizes)) {
                 $this->logger->warning("Trans.eu: Missing vehicle configuration for $carrierCode (Qty: $qty m2)");
+                $this->debugInfo['steps'][] = "Missing vehicle configuration.";
                 return null;
             }
 
@@ -159,6 +186,7 @@ class TransEuQuoteService
             $finalVehicleSizeId = $this->resolveVehicleSizeId($vehicleSizes);
             if (!$finalVehicleSizeId) {
                 $this->logger->warning("Trans.eu: Could not resolve vehicle size ID for " . implode(',', $vehicleSizes));
+                $this->debugInfo['steps'][] = "Could not resolve vehicle size ID.";
                 return null;
             }
 
@@ -197,9 +225,30 @@ class TransEuQuoteService
                 $otherRequirements = explode(',', $otherReqConfig);
             }
 
+            $this->debugInfo['vehicle_params'] = [
+                'size_id' => $finalVehicleSizeId,
+                'bodies' => $requiredTruckBodies,
+                'freight_type' => $freightType,
+                'capacity_tons' => $capacityTons,
+                'other_req' => $otherRequirements
+            ];
+
+            $this->debugInfo['load_params'] = [
+                'pallets_count' => $palletsCount,
+                'load_type' => $loadType,
+                'pallet_dims' => "$loadLength x $loadWidth",
+                'total_ldm' => $totalLdm,
+                'total_weight_kg' => $totalWeightKg
+            ];
+
             // Get coordinates
             $originCoords = $this->distanceService->getCoordinates($originAddress);
             $destCoords = $this->distanceService->getCoordinates($destinationAddress);
+
+            $this->debugInfo['coordinates'] = [
+                'origin' => $originCoords,
+                'dest' => $destCoords
+            ];
 
             // 4. Build Request
             /** @var \GardenLawn\TransEu\Model\Data\PricePredictionRequest $requestModel */
@@ -277,18 +326,32 @@ class TransEuQuoteService
             $requestModel->setVehicleRequirements($vehicleRequirements);
             $requestModel->setData('length', $totalLdm);
 
+            $this->debugInfo['request_payload'] = $requestModel->toArray();
+
             // 5. Call API
             $response = $this->apiService->predictPrice($requestModel);
+            $this->debugInfo['api_response'] = $response;
 
             // 6. Convert Currency and Apply Factor
             if (isset($response['prediction'][0]) && isset($response['currency']) && $response['currency'] == 'EUR') {
                 $priceEur = $response['prediction'][0];
-                $priceEur *= $priceFactor;
-                return $this->convertEurToStoreCurrency($priceEur);
+                $finalPrice = $this->convertEurToStoreCurrency($priceEur * $priceFactor);
+
+                $this->debugInfo['price_calculation'] = [
+                    'base_eur' => $priceEur,
+                    'factor' => $priceFactor,
+                    'factored_eur' => $priceEur * $priceFactor,
+                    'final_store_currency' => $finalPrice
+                ];
+
+                return $finalPrice;
+            } else {
+                $this->debugInfo['steps'][] = "Invalid API response or missing prediction.";
             }
 
         } catch (\Exception $e) {
             $this->logger->error("Trans.eu Quote Error ($carrierCode): " . $e->getMessage());
+            $this->debugInfo['steps'][] = "Exception: " . $e->getMessage();
         }
 
         return null;

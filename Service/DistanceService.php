@@ -16,6 +16,8 @@ class DistanceService
     protected Curl $curl;
     protected LoggerInterface $logger;
 
+    protected static $coordinatesCache = [];
+
     public function __construct(
         ScopeConfigInterface $scopeConfig,
         Curl $curl,
@@ -52,13 +54,25 @@ class DistanceService
      */
     public function getCoordinates(string $address): ?array
     {
-        $provider = $this->scopeConfig->getValue('delivery/api_provider/provider');
-
-        if ($provider === 'here') {
-            return $this->geocodeAddressHere($address);
+        $cacheKey = md5($address);
+        if (isset(self::$coordinatesCache[$cacheKey])) {
+            return self::$coordinatesCache[$cacheKey];
         }
 
-        return $this->geocodeAddressGoogle($address);
+        $provider = $this->scopeConfig->getValue('delivery/api_provider/provider');
+        $result = null;
+
+        if ($provider === 'here') {
+            $result = $this->geocodeAddressHere($address);
+        } else {
+            $result = $this->geocodeAddressGoogle($address);
+        }
+
+        if ($result) {
+            self::$coordinatesCache[$cacheKey] = $result;
+        }
+
+        return $result;
     }
 
     /**

@@ -27,6 +27,7 @@ class TransEuQuoteService
     protected $taxConfig;
 
     protected $debugInfo = [];
+    protected static $lastRequestTime = 0.0;
 
     protected $loadDimensions = [
         '2_europalette' => ['length' => 1.2, 'width' => 0.8],
@@ -383,9 +384,24 @@ class TransEuQuoteService
 
             $this->debugInfo['request_payload'] = $requestModel->toArray();
 
+            // Log Request
+            $this->logger->info("Trans.eu Request ($carrierCode): " . json_encode($this->debugInfo['request_payload']));
+
+            // Rate limiting logic
+            $currentTime = microtime(true);
+            $timeSinceLast = $currentTime - self::$lastRequestTime;
+            if ($timeSinceLast < 1.0) {
+                $sleepTime = (1.0 - $timeSinceLast) * 1000; // microseconds
+                usleep((int)$sleepTime);
+            }
+            self::$lastRequestTime = microtime(true);
+
             // Call API
             $response = $this->apiService->predictPrice($requestModel);
             $this->debugInfo['api_response'] = $response;
+
+            // Log Response
+            $this->logger->info("Trans.eu Response ($carrierCode): " . json_encode($response));
 
             if (isset($response['prediction'][0]) && isset($response['currency']) && $response['currency'] == 'EUR') {
                 $priceEur = $response['prediction'][0];

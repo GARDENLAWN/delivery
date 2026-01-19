@@ -2,11 +2,13 @@
 
 namespace GardenLawn\Delivery\ViewModel;
 
+use Exception;
 use GardenLawn\Delivery\Helper\Config;
 use GardenLawn\Delivery\Model\Carrier\CourierShipping;
 use GardenLawn\Delivery\Model\Carrier\DirectForklift;
 use GardenLawn\Delivery\Model\Carrier\DirectLift;
 use GardenLawn\Delivery\Model\Carrier\DirectNoLift;
+use Magento\Catalog\Model\Product;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 use Magento\Framework\HTTP\Client\Curl;
 use Magento\Checkout\Model\Session as CheckoutSession;
@@ -14,6 +16,7 @@ use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Api\AddressRepositoryInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Rule\Model\Condition\Combine;
 use Magento\Store\Model\ScopeInterface;
 use Magento\SalesRule\Model\ResourceModel\Rule\CollectionFactory as RuleCollectionFactory;
 use Magento\Quote\Model\Quote\AddressFactory;
@@ -24,7 +27,6 @@ use Magento\Store\Model\StoreManagerInterface;
 class DistanceCalculator implements ArgumentInterface
 {
     private Config $config;
-    private Curl $curl;
     private CourierShipping $courierShipping;
     private DirectNoLift $directNoLift;
     private DirectLift $directLift;
@@ -45,7 +47,6 @@ class DistanceCalculator implements ArgumentInterface
 
     public function __construct(
         Config $config,
-        Curl $curl,
         CourierShipping $courierShipping,
         DirectNoLift $directNoLift,
         DirectLift $directLift,
@@ -62,7 +63,6 @@ class DistanceCalculator implements ArgumentInterface
         StoreManagerInterface $storeManager
     ) {
         $this->config = $config;
-        $this->curl = $curl;
         $this->courierShipping = $courierShipping;
         $this->directNoLift = $directNoLift;
         $this->directLift = $directLift;
@@ -104,7 +104,7 @@ class DistanceCalculator implements ArgumentInterface
             if ($postcode && $postcode !== '*') {
                 return $postcode;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
         }
 
         if ($this->customerSession->isLoggedIn()) {
@@ -117,7 +117,7 @@ class DistanceCalculator implements ArgumentInterface
                     $address = $this->addressRepository->getById($defaultShippingId);
                     return $address->getPostcode();
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
             }
         }
 
@@ -205,7 +205,7 @@ class DistanceCalculator implements ArgumentInterface
         return $costs;
     }
 
-    public function getPromotionMessage(\Magento\Catalog\Model\Product $product, string $methodCode, float $qty = 1, string $postcode = null): ?string
+    public function getPromotionMessage(Product $product, string $methodCode, float $qty = 1, string $postcode = null): ?string
     {
         try {
             $websiteId = $this->storeManager->getStore()->getWebsiteId();
@@ -225,7 +225,6 @@ class DistanceCalculator implements ArgumentInterface
             $price = $product->getPriceInfo()->getPrice('final_price')->getAmount()->getValue();
             $rowTotal = $price * $validationQty;
 
-            /** @var \Magento\Quote\Model\Quote\Address $address */
             $address = $this->addressFactory->create();
             $address->setShippingMethod($methodCode);
             $address->setCountryId('PL');
@@ -233,7 +232,6 @@ class DistanceCalculator implements ArgumentInterface
                 $address->setPostcode($postcode);
             }
 
-            /** @var \Magento\Quote\Model\Quote\Item $item */
             $item = $this->itemFactory->create();
             $item->setProduct($product);
             $item->setQty($validationQty);
@@ -292,7 +290,7 @@ class DistanceCalculator implements ArgumentInterface
                 return implode('<br>', $messages);
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return "Error: " . $e->getMessage();
         }
 
@@ -302,9 +300,9 @@ class DistanceCalculator implements ArgumentInterface
     /**
      * Recursively remove total_qty conditions from the rule
      *
-     * @param \Magento\Rule\Model\Condition\Combine $combine
+     * @param Combine $combine
      */
-    private function removeQtyConditions($combine)
+    private function removeQtyConditions($combine): void
     {
         $conditions = $combine->getConditions();
         $newConditions = [];
@@ -327,10 +325,10 @@ class DistanceCalculator implements ArgumentInterface
     /**
      * Extract required quantity from rule conditions
      *
-     * @param \Magento\Rule\Model\Condition\Combine $combine
+     * @param Combine $combine
      * @return float|null
      */
-    private function extractQtyRequirement($combine)
+    private function extractQtyRequirement($combine): ?float
     {
         foreach ($combine->getConditions() as $condition) {
             if ($condition instanceof \Magento\SalesRule\Model\Rule\Condition\Combine) {
@@ -358,7 +356,7 @@ class DistanceCalculator implements ArgumentInterface
             . "&key=" . $apiKey;
 
         try {
-            $curl = new \Magento\Framework\HTTP\Client\Curl();
+            $curl = new Curl();
             $curl->get($url);
             $responseBody = $curl->getBody();
             $result = json_decode($responseBody, true);
@@ -384,7 +382,7 @@ class DistanceCalculator implements ArgumentInterface
                 return ['error' => $result['error_message'], 'raw_json' => $responseBody];
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['error' => $e->getMessage()];
         }
 
@@ -450,7 +448,7 @@ class DistanceCalculator implements ArgumentInterface
 
             $url = "https://router.hereapi.com/v8/routes?" . $queryString;
 
-            $curl = new \Magento\Framework\HTTP\Client\Curl();
+            $curl = new Curl();
             $curl->get($url);
             $responseBody = $curl->getBody();
             $result = json_decode($responseBody, true);
@@ -478,7 +476,7 @@ class DistanceCalculator implements ArgumentInterface
                 return ['error' => $result['title'] . (isset($result['cause']) ? ': ' . $result['cause'] : ''), 'raw_json' => $responseBody];
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['error' => $e->getMessage()];
         }
 
@@ -490,7 +488,7 @@ class DistanceCalculator implements ArgumentInterface
         $url = "https://geocode.search.hereapi.com/v1/geocode?q=" . urlencode($address) . "&apiKey=" . $apiKey;
 
         try {
-            $curl = new \Magento\Framework\HTTP\Client\Curl();
+            $curl = new Curl();
             $curl->get($url);
             $responseBody = $curl->getBody();
             $response = json_decode($responseBody, true);
@@ -506,7 +504,7 @@ class DistanceCalculator implements ArgumentInterface
             if (empty($response['items'])) {
                 return ['error' => 'Address not found'];
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ['error' => $e->getMessage()];
         }
 

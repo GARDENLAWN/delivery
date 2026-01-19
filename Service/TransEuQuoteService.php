@@ -21,6 +21,17 @@ class TransEuQuoteService
     protected $logger;
     protected $json;
 
+    protected $loadDimensions = [
+        '2_europalette' => ['length' => 1.2, 'width' => 0.8],
+        '34_eur_6' => ['length' => 0.8, 'width' => 0.6],
+        '35_eur_2' => ['length' => 1.2, 'width' => 1.0],
+        '36_eur_3' => ['length' => 1.0, 'width' => 1.2],
+        '37_container_palette' => ['length' => 1.14, 'width' => 1.14],
+        '38_oversized' => ['length' => 1.2, 'width' => 1.2],
+        '3_big_bag' => ['length' => 0.9, 'width' => 0.9],
+        '5_bag' => ['length' => 0.9, 'width' => 0.9],
+    ];
+
     public function __construct(
         ApiService $apiService,
         PricePredictionRequestFactory $requestFactory,
@@ -71,6 +82,8 @@ class TransEuQuoteService
             $vehicleSizes = [];
             $requiredTruckBodies = [];
             $palletsCount = 0;
+            $rulePalletLength = null;
+            $rulePalletWidth = null;
 
             if ($vehicleRulesJson) {
                 try {
@@ -95,6 +108,13 @@ class TransEuQuoteService
                             $requiredTruckBodies = $rule['vehicle_bodies'];
                             if (!is_array($requiredTruckBodies)) {
                                 $requiredTruckBodies = [$requiredTruckBodies];
+                            }
+
+                            if (isset($rule['pallet_length']) && $rule['pallet_length'] > 0) {
+                                $rulePalletLength = (float)$rule['pallet_length'];
+                            }
+                            if (isset($rule['pallet_width']) && $rule['pallet_width'] > 0) {
+                                $rulePalletWidth = (float)$rule['pallet_width'];
                             }
 
                             $palletsCount = $calculatedPallets;
@@ -137,12 +157,15 @@ class TransEuQuoteService
 
             // Calculate weight
             $weightPerM2 = 25.0; // 25kg per m2
+            $targetSku = $this->scopeConfig->getValue($configPath . 'target_sku') ?: 'GARDENLAWNS001';
             try {
-                $product = $this->productRepository->get('GARDENLAWNS001');
+                $product = $this->productRepository->get($targetSku);
                 if ($product->getWeight() > 0) {
                     $weightPerM2 = (float)$product->getWeight();
                 }
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+                $this->logger->warning("Trans.eu: Product not found for weight calculation: $targetSku");
+            }
 
             $totalWeightKg = $qty * $weightPerM2;
             $capacityTons = ceil($totalWeightKg / 1000);
@@ -150,6 +173,15 @@ class TransEuQuoteService
 
             $freightType = $this->scopeConfig->getValue($configPath . 'transeu_freight_type') ?: 'ftl';
             $loadType = $this->scopeConfig->getValue($configPath . 'transeu_load_type') ?: '2_europalette';
+
+            // Calculate LDM
+            $dims = $this->getLoadDimensions($loadType);
+            $loadLength = $rulePalletLength ?: $dims['length'];
+            $loadWidth = $rulePalletWidth ?: $dims['width'];
+
+            // Formula: (Quantity * Length * Width) / 2.4
+            $totalLdm = ($palletsCount * $loadLength * $loadWidth) / 2.4;
+            $totalLdm = max(0.1, round($totalLdm, 1));
 
             // Other requirements
             $otherRequirements = [];
@@ -179,10 +211,10 @@ class TransEuQuoteService
 
             $defaultLoad = [
                 "amount" => $palletsCount,
-                "length" => 1.2,
+                "length" => $loadLength,
                 "name" => "Trawa w rolce ($qty m2)",
                 "type_of_load" => $loadType,
-                "width" => 0.8,
+                "width" => $loadWidth,
             ];
 
             $spots = [
@@ -226,7 +258,7 @@ class TransEuQuoteService
                 "transport_type" => $freightType
             ];
             $requestModel->setVehicleRequirements($vehicleRequirements);
-            $requestModel->setData('length', 2);
+            $requestModel->setData('length', $totalLdm);
 
             // 5. Call API
             $response = $this->apiService->predictPrice($requestModel);
@@ -270,7 +302,7 @@ class TransEuQuoteService
         if ($hasSolo) return '5_solo';
         if ($hasDouble) return '2_double_trailer';
 
-        // Fallback: if only one size is selected and it's not one of the above (e.g. 1_bus if it was allowed)
+        // Fallback: if only one size is selected and it's not one of the above
         if (count($sizes) === 1) {
             return reset($sizes);
         }
@@ -321,5 +353,10 @@ class TransEuQuoteService
         }
 
         return ['city' => $city, 'zip' => $zip];
+    }
+
+    protected function getLoadDimensions($loadType)
+    {
+        return $this->loadDimensions[$loadType] ?? $this->loadDimensions['default'];
     }
 }

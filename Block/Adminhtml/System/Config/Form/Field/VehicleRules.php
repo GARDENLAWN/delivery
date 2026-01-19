@@ -15,22 +15,32 @@ class VehicleRules extends AbstractFieldArray
         $this->addColumn('max_pallets', [
             'label' => __('Max Pallets'),
             'class' => 'required-entry validate-digits',
-            'style' => 'width: 80px'
+            'style' => 'width: 60px'
         ]);
         $this->addColumn('m2_per_pallet', [
             'label' => __('m2 / Pallet'),
             'class' => 'required-entry validate-number',
-            'style' => 'width: 80px'
+            'style' => 'width: 60px'
+        ]);
+        $this->addColumn('pallet_length', [
+            'label' => __('Pallet Length (m)'),
+            'class' => 'validate-number',
+            'style' => 'width: 60px'
+        ]);
+        $this->addColumn('pallet_width', [
+            'label' => __('Pallet Width (m)'),
+            'class' => 'validate-number',
+            'style' => 'width: 60px'
         ]);
         $this->addColumn('vehicle_size', [
             'label' => __('Vehicle Size'),
             'renderer' => $this->getVehicleSizeRenderer(),
-            'style' => 'width: 200px'
+            'style' => 'width: 180px'
         ]);
         $this->addColumn('vehicle_bodies', [
             'label' => __('Vehicle Body'),
             'renderer' => $this->getVehicleBodyRenderer(),
-            'style' => 'width: 200px'
+            'style' => 'width: 180px'
         ]);
 
         $this->_addAfter = false;
@@ -53,6 +63,12 @@ class VehicleRules extends AbstractFieldArray
             // Ensure the key exists to prevent JS error
             if (!$row->hasData('m2_per_pallet')) {
                 $row->setData('m2_per_pallet', '35'); // Default value
+            }
+            if (!$row->hasData('pallet_length')) {
+                $row->setData('pallet_length', '1.2'); // Default Europallet
+            }
+            if (!$row->hasData('pallet_width')) {
+                $row->setData('pallet_width', '0.8'); // Default Europallet
             }
 
             // Ensure other keys exist too just in case

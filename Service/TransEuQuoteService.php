@@ -9,6 +9,8 @@ use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Magento\Framework\Serialize\Serializer\Json;
+use Magento\Tax\Model\Calculation;
+use Magento\Tax\Model\Config as TaxConfig;
 
 class TransEuQuoteService
 {
@@ -21,6 +23,8 @@ class TransEuQuoteService
     protected $logger;
     protected $json;
     protected $distanceService;
+    protected $taxCalculation;
+    protected $taxConfig;
 
     protected $debugInfo = [];
 
@@ -44,7 +48,9 @@ class TransEuQuoteService
         ProductRepositoryInterface $productRepository,
         LoggerInterface $logger,
         Json $json,
-        DistanceService $distanceService
+        DistanceService $distanceService,
+        Calculation $taxCalculation,
+        TaxConfig $taxConfig
     ) {
         $this->apiService = $apiService;
         $this->requestFactory = $requestFactory;
@@ -55,6 +61,8 @@ class TransEuQuoteService
         $this->logger = $logger;
         $this->json = $json;
         $this->distanceService = $distanceService;
+        $this->taxCalculation = $taxCalculation;
+        $this->taxConfig = $taxConfig;
     }
 
     public function getDebugInfo()
@@ -374,26 +382,34 @@ class TransEuQuoteService
 
             if (isset($response['prediction'][0]) && isset($response['currency']) && $response['currency'] == 'EUR') {
                 $priceEur = $response['prediction'][0];
-                $finalPrice = $this->convertEurToStoreCurrency($priceEur * $priceFactor);
+                $basePricePln = $this->convertEurToStoreCurrency($priceEur * $priceFactor);
 
-                // Add Tax
-                $taxRate = (float)$this->scopeConfig->getValue('delivery/general/tax_rate');
-                if ($taxRate > 0) {
-                    $finalPrice = $finalPrice * (1 + $taxRate / 100);
+                // Calculate Tax and Rounding
+                $taxClassId = $this->scopeConfig->getValue('tax/classes/shipping_tax_class');
+                $taxRate = 0;
+
+                if ($taxClassId) {
+                    $request = $this->taxCalculation->getRateRequest(null, null, null, $this->storeManager->getStore());
+                    $request->setProductClassId($taxClassId);
+                    $taxRate = $this->taxCalculation->getRate($request);
                 }
 
-                // Round to int
-                $finalPrice = (int)ceil($finalPrice);
+                $grossPrice = $basePricePln * (1 + $taxRate / 100);
+                $grossPriceRounded = ceil($grossPrice);
+                $finalNetPrice = $grossPriceRounded / (1 + $taxRate / 100);
 
                 $this->debugInfo['price_calculation'] = [
                     'base_eur' => $priceEur,
                     'factor' => $priceFactor,
                     'factored_eur' => $priceEur * $priceFactor,
+                    'base_pln' => $basePricePln,
                     'tax_rate' => $taxRate,
-                    'final_store_currency' => $finalPrice
+                    'gross_calculated' => $grossPrice,
+                    'gross_rounded' => $grossPriceRounded,
+                    'final_net_price' => $finalNetPrice
                 ];
 
-                return (float)$finalPrice;
+                return (float)$finalNetPrice;
             } else {
                 $this->debugInfo['steps'][] = "Invalid API response or missing prediction.";
             }

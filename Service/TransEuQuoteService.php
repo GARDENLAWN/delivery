@@ -279,12 +279,12 @@ class TransEuQuoteService
 
             // Round coordinates to 6 decimal places
             if ($originCoords) {
-                $originCoords['lat'] = round($originCoords['lat'], 7);
-                $originCoords['lng'] = round($originCoords['lng'], 7);
+                $originCoords['lat'] = round($originCoords['lat'], 6);
+                $originCoords['lng'] = round($originCoords['lng'], 6);
             }
             if ($destCoords) {
-                $destCoords['lat'] = round($destCoords['lat'], 7);
-                $destCoords['lng'] = round($destCoords['lng'], 7);
+                $destCoords['lat'] = round($destCoords['lat'], 6);
+                $destCoords['lng'] = round($destCoords['lng'], 6);
             }
 
             $this->debugInfo['coordinates'] = [
@@ -376,14 +376,24 @@ class TransEuQuoteService
                 $priceEur = $response['prediction'][0];
                 $finalPrice = $this->convertEurToStoreCurrency($priceEur * $priceFactor);
 
+                // Add Tax
+                $taxRate = (float)$this->scopeConfig->getValue('delivery/general/tax_rate');
+                if ($taxRate > 0) {
+                    $finalPrice = $finalPrice * (1 + $taxRate / 100);
+                }
+
+                // Round to int
+                $finalPrice = (int)ceil($finalPrice);
+
                 $this->debugInfo['price_calculation'] = [
                     'base_eur' => $priceEur,
                     'factor' => $priceFactor,
                     'factored_eur' => $priceEur * $priceFactor,
+                    'tax_rate' => $taxRate,
                     'final_store_currency' => $finalPrice
                 ];
 
-                return $finalPrice;
+                return (float)$finalPrice;
             } else {
                 $this->debugInfo['steps'][] = "Invalid API response or missing prediction.";
             }

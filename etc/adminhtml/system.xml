@@ -300,9 +300,11 @@
                     <label>Max Quantity (m2)</label>
                     <comment>Hide method if quantity exceeds this value</comment>
                 </field>
-                <field id="pricing_config" translate="label" type="textarea" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Pricing Configuration (JSON)</label>
-                    <comment><![CDATA[JSON format: {"tiers":[{"min_distance":0,"price":1000,"type":"fixed"},{"min_distance":150,"price":9,"type":"per_km"}]}]]></comment>
+                <field id="pricing_config" translate="label" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Pricing Configuration</label>
+                    <frontend_model>GardenLawn\Delivery\Block\Adminhtml\System\Config\Form\Field\PricingConfig</frontend_model>
+                    <backend_model>Magento\Config\Model\Config\Backend\Serialized\ArraySerialized</backend_model>
+                    <comment>Define pricing tiers based on distance.</comment>
                 </field>
                 <field id="use_transeu_api" translate="label" type="select" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Use Trans.eu Price Prediction</label>
@@ -385,9 +387,11 @@
                     <label>Max Quantity (m2)</label>
                     <comment>Hide method if quantity exceeds this value</comment>
                 </field>
-                <field id="pricing_config" translate="label" type="textarea" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Pricing Configuration (JSON)</label>
-                    <comment><![CDATA[JSON format: {"tiers":[{"min_distance":0,"price":1100,"type":"fixed"},{"min_distance":150,"price":10,"type":"per_km"}]}]]></comment>
+                <field id="pricing_config" translate="label" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Pricing Configuration</label>
+                    <frontend_model>GardenLawn\Delivery\Block\Adminhtml\System\Config\Form\Field\PricingConfig</frontend_model>
+                    <backend_model>Magento\Config\Model\Config\Backend\Serialized\ArraySerialized</backend_model>
+                    <comment>Define pricing tiers based on distance.</comment>
                 </field>
                 <field id="use_transeu_api" translate="label" type="select" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Use Trans.eu Price Prediction</label>
@@ -470,9 +474,11 @@
                     <label>Max Quantity (m2)</label>
                     <comment>Hide method if quantity exceeds this value</comment>
                 </field>
-                <field id="pricing_config" translate="label" type="textarea" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Pricing Configuration (JSON)</label>
-                    <comment><![CDATA[JSON format: {"tiers":[{"min_distance":0,"price":1200,"type":"fixed"},{"min_distance":150,"price":11,"type":"per_km"}]}]]></comment>
+                <field id="pricing_config" translate="label" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Pricing Configuration</label>
+                    <frontend_model>GardenLawn\Delivery\Block\Adminhtml\System\Config\Form\Field\PricingConfig</frontend_model>
+                    <backend_model>Magento\Config\Model\Config\Backend\Serialized\ArraySerialized</backend_model>
+                    <comment>Define pricing tiers based on distance.</comment>
                 </field>
                 <field id="use_transeu_api" translate="label" type="select" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Use Trans.eu Price Prediction</label>

@@ -208,16 +208,35 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
         }
 
         $config = json_decode($configJson, true);
-        if (!$config || !isset($config['tiers']) || !is_array($config['tiers'])) {
+        if (!$config || !is_array($config)) {
+            return 0.0;
+        }
+
+        $tiers = [];
+
+        // Handle old format {"tiers": [...]}
+        if (isset($config['tiers']) && is_array($config['tiers'])) {
+            $tiers = $config['tiers'];
+        } else {
+            // Handle new format (ArraySerialized) - array of rows
+            // Filter out empty rows if any
+            foreach ($config as $row) {
+                if (isset($row['min_distance']) && isset($row['price']) && isset($row['type'])) {
+                    $tiers[] = $row;
+                }
+            }
+        }
+
+        if (empty($tiers)) {
             return 0.0;
         }
 
         // Sort tiers by distance descending to find the matching range easily
-        usort($config['tiers'], function ($a, $b) {
+        usort($tiers, function ($a, $b) {
             return $b['min_distance'] <=> $a['min_distance'];
         });
 
-        foreach ($config['tiers'] as $tier) {
+        foreach ($tiers as $tier) {
             if (!isset($tier['min_distance'], $tier['price'], $tier['type'])) {
                 continue;
             }

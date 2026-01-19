@@ -189,11 +189,11 @@
                 <pricing_config>
                     {
                         "tiers": [
-                            {"min_distance": 500, "price": 7, "type": "per_km"},
-                            {"min_distance": 300, "price": 9, "type": "per_km"},
-                            {"min_distance": 150, "price": 11, "type": "per_km"},
-                            {"min_distance": 50, "price": 1700, "type": "fixed"},
-                            {"min_distance": 0, "price": 1200, "type": "fixed"}
+                            {"min_distance": 550, "price": 8, "type": "per_km"},
+                            {"min_distance": 500, "price": 4400, "type": "fixed"},
+                            {"min_distance": 450, "price": 4000, "type": "fixed"},
+                            {"min_distance": 400, "price": 3800, "type": "fixed"},
+                            {"min_distance": 0, "price": 3600, "type": "fixed"}
                         ]
                     }
                 </pricing_config>

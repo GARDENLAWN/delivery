@@ -281,23 +281,23 @@ class TransEuQuoteService
                 'total_ldm' => $params['total_ldm']
             ];
 
-            // Get coordinates
-            $originCoords = $this->distanceService->getCoordinates($originAddress);
-            $destCoords = $this->distanceService->getCoordinates($destinationAddress);
+            // Get coordinates and address details
+            $originInfo = $this->distanceService->getCoordinates($originAddress);
+            $destInfo = $this->distanceService->getCoordinates($destinationAddress);
 
             // Round coordinates to 6 decimal places
-            if ($originCoords) {
-                $originCoords['lat'] = round($originCoords['lat'], 6);
-                $originCoords['lng'] = round($originCoords['lng'], 6);
+            if ($originInfo) {
+                $originInfo['lat'] = round($originInfo['lat'], 6);
+                $originInfo['lng'] = round($originInfo['lng'], 6);
             }
-            if ($destCoords) {
-                $destCoords['lat'] = round($destCoords['lat'], 6);
-                $destCoords['lng'] = round($destCoords['lng'], 6);
+            if ($destInfo) {
+                $destInfo['lat'] = round($destInfo['lat'], 6);
+                $destInfo['lng'] = round($destInfo['lng'], 6);
             }
 
             $this->debugInfo['coordinates'] = [
-                'origin' => $originCoords,
-                'dest' => $destCoords
+                'origin' => $originInfo,
+                'dest' => $destInfo
             ];
 
             // Build Request
@@ -311,6 +311,13 @@ class TransEuQuoteService
 
             $originParts = $this->parseAddress($originAddress);
             $destParts = $this->parseAddress($destinationAddress);
+
+            // Use geocoded city/zip if available, otherwise fallback to parsed
+            $originCity = !empty($originInfo['city']) ? $originInfo['city'] : $originParts['city'];
+            $originZip = !empty($originInfo['zip']) ? $originInfo['zip'] : $originParts['zip'];
+
+            $destCity = !empty($destInfo['city']) ? $destInfo['city'] : $destParts['city'];
+            $destZip = !empty($destInfo['zip']) ? $destInfo['zip'] : $destParts['zip'];
 
             $pickupDate = date('Y-m-d', strtotime('+1 day'));
             $deliveryDate = date('Y-m-d', strtotime('+2 days'));
@@ -329,10 +336,10 @@ class TransEuQuoteService
                 [
                     "operations" => [["loads" => [$defaultLoad]]],
                     "place" => [
-                        "address" => ["locality" => $originParts['city'], "postal_code" => $originParts['zip']],
+                        "address" => ["locality" => $originCity, "postal_code" => $originZip],
                         "coordinates" => [
-                            "latitude" => $originCoords['lat'] ?? 0,
-                            "longitude" => $originCoords['lng'] ?? 0
+                            "latitude" => $originInfo['lat'] ?? 0,
+                            "longitude" => $originInfo['lng'] ?? 0
                         ],
                         "country" => "PL"
                     ],
@@ -345,10 +352,10 @@ class TransEuQuoteService
                 [
                     "operations" => [["loads" => [$defaultLoad]]],
                     "place" => [
-                        "address" => ["locality" => $destParts['city'], "postal_code" => $destParts['zip']],
+                        "address" => ["locality" => $destCity, "postal_code" => $destZip],
                         "coordinates" => [
-                            "latitude" => $destCoords['lat'] ?? 0,
-                            "longitude" => $destCoords['lng'] ?? 0
+                            "latitude" => $destInfo['lat'] ?? 0,
+                            "longitude" => $destInfo['lng'] ?? 0
                         ],
                         "country" => "PL"
                     ],

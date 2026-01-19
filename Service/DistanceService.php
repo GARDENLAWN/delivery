@@ -45,22 +45,17 @@ class DistanceService
     }
 
     /**
-     * Get coordinates for an address using configured provider
+     * Get coordinates and address details for an address using configured provider
      *
      * @param string $address
-     * @return array|null ['lat' => float, 'lng' => float] or null
+     * @return array|null ['lat' => float, 'lng' => float, 'city' => string, 'zip' => string] or null
      */
     public function getCoordinates(string $address): ?array
     {
         $provider = $this->scopeConfig->getValue('delivery/api_provider/provider');
 
         if ($provider === 'here') {
-            $coordsStr = $this->geocodeAddressHere($address);
-            if ($coordsStr) {
-                list($lat, $lng) = explode(',', $coordsStr);
-                return ['lat' => (float)$lat, 'lng' => (float)$lng];
-            }
-            return null;
+            return $this->geocodeAddressHere($address);
         }
 
         return $this->geocodeAddressGoogle($address);
@@ -138,7 +133,34 @@ class DistanceService
 
             if (isset($data['results'][0]['geometry']['location'])) {
                 $loc = $data['results'][0]['geometry']['location'];
-                return ['lat' => (float)$loc['lat'], 'lng' => (float)$loc['lng']];
+                $result = [
+                    'lat' => (float)$loc['lat'],
+                    'lng' => (float)$loc['lng'],
+                    'city' => '',
+                    'zip' => ''
+                ];
+
+                // Extract city and zip
+                foreach ($data['results'][0]['address_components'] as $component) {
+                    if (in_array('locality', $component['types'])) {
+                        $result['city'] = $component['long_name'];
+                    }
+                    if (in_array('postal_code', $component['types'])) {
+                        $result['zip'] = $component['long_name'];
+                    }
+                }
+
+                // Fallback for city if locality not found (e.g. administrative_area_level_2)
+                if (empty($result['city'])) {
+                     foreach ($data['results'][0]['address_components'] as $component) {
+                        if (in_array('administrative_area_level_2', $component['types']) || in_array('postal_town', $component['types'])) {
+                            $result['city'] = $component['long_name'];
+                            break;
+                        }
+                    }
+                }
+
+                return $result;
             }
         } catch (\Exception $e) {
             $this->logger->error('DistanceService Google Geocode: ' . $e->getMessage());
@@ -163,10 +185,10 @@ class DistanceService
             }
 
             // Geocode addresses to coordinates
-            $originCoords = $this->geocodeAddressHere($origin);
-            $destCoords = $this->geocodeAddressHere($destination);
+            $originInfo = $this->geocodeAddressHere($origin);
+            $destInfo = $this->geocodeAddressHere($destination);
 
-            if (!$originCoords || !$destCoords) {
+            if (!$originInfo || !$destInfo) {
                 $this->logger->warning('DistanceService: Failed to geocode addresses');
                 return 0.0;
             }
@@ -176,8 +198,8 @@ class DistanceService
 
             $params = [
                 'transportMode' => 'truck',
-                'origin' => $originCoords,
-                'destination' => $destCoords,
+                'origin' => $originInfo['lat'] . "," . $originInfo['lng'],
+                'destination' => $destInfo['lat'] . "," . $destInfo['lng'],
                 'return' => 'summary',
                 'apiKey' => $apiKey
             ];
@@ -214,9 +236,9 @@ class DistanceService
      * Geocode address to coordinates using HERE Geocoding API
      *
      * @param string $address
-     * @return string|null Format: "lat,lng"
+     * @return array|null
      */
-    private function geocodeAddressHere(string $address): ?string
+    private function geocodeAddressHere(string $address): ?array
     {
         try {
             $apiKey = $this->scopeConfig->getValue('delivery/api_provider/here_api_key');
@@ -229,17 +251,25 @@ class DistanceService
             $response = $this->curl->getBody();
             $data = json_decode($response, true);
 
-            if (!$data || !isset($data['items'][0]['position'])) {
-                $this->logger->warning('DistanceService: Failed to geocode address: ' . $address);
-                return null;
+            if (isset($data['items'][0]['position'])) {
+                $item = $data['items'][0];
+                return [
+                    'lat' => (float)$item['position']['lat'],
+                    'lng' => (float)$item['position']['lng'],
+                    'city' => $item['address']['city'] ?? ($item['address']['label'] ?? ''),
+                    'zip' => $item['address']['postalCode'] ?? ''
+                ];
             }
 
-            $position = $data['items'][0]['position'];
-            return $position['lat'] . ',' . $position['lng'];
+            if (isset($data['title'])) {
+                $this->logger->warning('DistanceService HERE Geocode Error: ' . $data['title']);
+                return null;
+            }
         } catch (\Exception $e) {
             $this->logger->error('DistanceService geocode: ' . $e->getMessage());
             return null;
         }
+        return null;
     }
 
     /**

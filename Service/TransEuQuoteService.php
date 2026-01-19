@@ -277,6 +277,16 @@ class TransEuQuoteService
             $originCoords = $this->distanceService->getCoordinates($originAddress);
             $destCoords = $this->distanceService->getCoordinates($destinationAddress);
 
+            // Round coordinates to 6 decimal places
+            if ($originCoords) {
+                $originCoords['lat'] = round($originCoords['lat'], 7);
+                $originCoords['lng'] = round($originCoords['lng'], 7);
+            }
+            if ($destCoords) {
+                $destCoords['lat'] = round($destCoords['lat'], 7);
+                $destCoords['lng'] = round($destCoords['lng'], 7);
+            }
+
             $this->debugInfo['coordinates'] = [
                 'origin' => $originCoords,
                 'dest' => $destCoords

@@ -167,9 +167,15 @@
                     <label>Intermediate Points (JSON)</label>
                     <comment><![CDATA[JSON format: {"points":["Address 1","Address 2"]}]]></comment>
                 </field>
-                <field id="prices_table" translate="label" type="textarea" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Prices Table (JSON)</label>
-                    <comment><![CDATA[JSON format with m2, price, palette, optional full_price]]></comment>
+                <field id="max_quantity" translate="label" type="text" sortOrder="85" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Max Quantity (m2)</label>
+                    <comment>Maximum quantity allowed for this method (default: 950)</comment>
+                </field>
+                <field id="pricing_table" translate="label" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Pricing Table</label>
+                    <frontend_model>GardenLawn\Delivery\Block\Adminhtml\System\Config\Form\Field\DistancePricingTable</frontend_model>
+                    <backend_model>Magento\Config\Model\Config\Backend\Serialized\ArraySerialized</backend_model>
+                    <comment>Define price per m2 for different quantity ranges.</comment>
                 </field>
                 <field id="price_supplement" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Price Supplement (%)</label>

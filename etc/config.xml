@@ -49,14 +49,8 @@
                 <name>Distance-based Delivery</name>
                 <description>Transport dedykowany liczony za km.</description>
                 <target_sku>GARDENLAWNS001</target_sku>
-                <points>
-                    {
-                    "points": [
-                    "ul.Wrocławska 7, 55-020 Rzeplin"
-                    ]
-                    }
-                </points>
-                <price_supplement>0</price_supplement>
+                <specific_origin>ul.Wrocławska 7, 55-020 Rzeplin, Polska</specific_origin>
+                <price_supplement>1</price_supplement>
                 <free_distance_limit>80</free_distance_limit>
                 <distance_surcharge>5</distance_surcharge>
                 <pricing_table>

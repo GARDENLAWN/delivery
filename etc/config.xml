@@ -57,9 +57,31 @@
                     }
                 </points>
                 <price_supplement>0</price_supplement>
-                <base_km>1</base_km>
                 <free_distance_limit>80</free_distance_limit>
                 <distance_surcharge>5</distance_surcharge>
+                <pricing_table>
+                    [
+                    {"m2":50,"price":16.73},
+                    {"m2":100,"price":9.73},
+                    {"m2":150,"price":7.4},
+                    {"m2":200,"price":6.23},
+                    {"m2":250,"price":5.53},
+                    {"m2":300,"price":5.06},
+                    {"m2":350,"price":4.73},
+                    {"m2":400,"price":4.48},
+                    {"m2":450,"price":4.28},
+                    {"m2":500,"price":4.13},
+                    {"m2":550,"price":4.0},
+                    {"m2":600,"price":3.89},
+                    {"m2":650,"price":3.8},
+                    {"m2":700,"price":3.73},
+                    {"m2":750,"price":3.66},
+                    {"m2":800,"price":3.6},
+                    {"m2":850,"price":3.55},
+                    {"m2":900,"price":3.51},
+                    {"m2":950,"price":3.46}
+                    ]
+                </pricing_table>
                 <sort_order>50</sort_order>
             </distanceshipping>
 

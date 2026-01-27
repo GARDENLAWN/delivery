@@ -108,54 +108,6 @@
             <tab>sales</tab>
             <resource>Magento_Shipping::config_shipping</resource>
 
-            <!-- Custom Shipping -->
-            <group id="customshipping" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
-                <label>Custom Shipping (External Quotes)</label>
-                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Enabled</label>
-                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                </field>
-                <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Title</label>
-                </field>
-                <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Method Name</label>
-                </field>
-                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Description</label>
-                    <comment>Information for customer about this delivery method</comment>
-                </field>
-                <field id="sort_order" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Sort Order</label>
-                </field>
-            </group>
-
-            <!-- Custom Free Shipping -->
-            <group id="customfreeshipping" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                <label>Custom Free Shipping (by SKU)</label>
-                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Enabled</label>
-                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                </field>
-                <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Title</label>
-                </field>
-                <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Method Name</label>
-                </field>
-                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Description</label>
-                    <comment>Information for customer about this delivery method</comment>
-                </field>
-                <field id="products_sku" translate="label" type="textarea" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Free Shipping Product SKUs</label>
-                    <comment>Semicolon-separated list of SKUs that qualify for free shipping (e.g., "sku1;sku2;sku3;")</comment>
-                </field>
-                <field id="sort_order" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Sort Order</label>
-                </field>
-            </group>
-
             <!-- Courier Shipping -->
             <group id="couriershipping" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Courier Shipping (Price Table)</label>
@@ -186,47 +138,6 @@
                     <comment>Additional percentage to add to calculated price (e.g., 10 for 10%)</comment>
                 </field>
                 <field id="sort_order" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Sort Order</label>
-                </field>
-            </group>
-
-            <!-- Courier with Elevator Shipping -->
-            <group id="courierwithelevatorshipping" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
-                <label>Courier with Elevator Shipping (Distance-based)</label>
-                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Enabled</label>
-                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                </field>
-                <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Title</label>
-                </field>
-                <field id="name" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Method Name</label>
-                </field>
-                <field id="description" translate="label" type="textarea" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Description</label>
-                    <comment>Information for customer about this delivery method</comment>
-                </field>
-                <field id="target_sku" translate="label" type="text" sortOrder="35" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Target Product SKU</label>
-                    <comment>SKU to calculate shipping for (default: GARDENLAWNS001)</comment>
-                </field>
-                <field id="price" translate="label" type="text" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Price per KM</label>
-                </field>
-                <field id="factor_min" translate="label" type="text" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Factor Min</label>
-                    <comment>Minimum load factor</comment>
-                </field>
-                <field id="factor_max" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Factor Max</label>
-                    <comment>Maximum load factor</comment>
-                </field>
-                <field id="max_load" translate="label" type="text" sortOrder="110" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Max Load (m2)</label>
-                    <comment>Maximum load capacity</comment>
-                </field>
-                <field id="sort_order" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Sort Order</label>
                 </field>
             </group>

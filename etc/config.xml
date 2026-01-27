@@ -23,23 +23,6 @@
             </truck_settings>
         </delivery>
         <carriers>
-            <customshipping>
-                <active>0</active>
-                <model>GardenLawn\Delivery\Model\Carrier\CustomShipping</model>
-                <title>Custom Shipping</title>
-                <name>Custom Shipping (External Quotes)</name>
-                <description>Indywidualna wycena transportu.</description>
-                <sort_order>10</sort_order>
-            </customshipping>
-            <customfreeshipping>
-                <active>0</active>
-                <model>GardenLawn\Delivery\Model\Carrier\CustomFreeShipping</model>
-                <title>Free Shipping</title>
-                <name>Free Shipping for Selected Products</name>
-                <description>Darmowa dostawa dla wybranych produktów.</description>
-                <products_sku>test</products_sku>
-                <sort_order>20</sort_order>
-            </customfreeshipping>
             <couriershipping>
                 <active>0</active>
                 <model>GardenLawn\Delivery\Model\Carrier\CourierShipping</model>
@@ -59,19 +42,6 @@
                 <price_supplement>0</price_supplement>
                 <sort_order>30</sort_order>
             </couriershipping>
-            <courierwithelevatorshipping>
-                <active>0</active>
-                <model>GardenLawn\Delivery\Model\Carrier\CourierWithElevatorShipping</model>
-                <title>Courier with Elevator</title>
-                <name>Courier Delivery with Elevator Service</name>
-                <description>Dostawa kurierem z windą. Wymagany utwardzony podjazd.</description>
-                <target_sku>GARDENLAWNS001</target_sku>
-                <price>0</price>
-                <factor_min>1</factor_min>
-                <factor_max>1.5</factor_max>
-                <max_load>100</max_load>
-                <sort_order>40</sort_order>
-            </courierwithelevatorshipping>
             <distanceshipping>
                 <active>0</active>
                 <model>GardenLawn\Delivery\Model\Carrier\DistanceShipping</model>

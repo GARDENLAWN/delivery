@@ -2,6 +2,7 @@
 namespace GardenLawn\Delivery\Service;
 
 use GardenLawn\TransEu\Model\ApiService;
+use GardenLawn\TransEu\Model\Data\PricePredictionRequest;
 use GardenLawn\TransEu\Model\Data\PricePredictionRequestFactory;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Directory\Model\CurrencyFactory;
@@ -235,7 +236,7 @@ class TransEuQuoteService
         return $result;
     }
 
-    public function getPrice(string $carrierCode, string $originAddress, string $destinationAddress, float $distanceKm, float $qty)
+    public function getPrice(string $carrierCode, string $originAddress, string $destinationAddress, float $distanceKm, float $qty): ?float
     {
         $this->debugInfo = [
             'carrier' => $carrierCode,
@@ -309,7 +310,7 @@ class TransEuQuoteService
             ];
 
             // Build Request
-            /** @var \GardenLawn\TransEu\Model\Data\PricePredictionRequest $requestModel */
+            /** @var PricePredictionRequest $requestModel */
             $requestModel = $this->requestFactory->create();
 
             $requestModel->setCompanyId($companyId);
@@ -346,8 +347,8 @@ class TransEuQuoteService
                     "place" => [
                         "address" => ["locality" => $originCity, "postal_code" => $originZip],
                         "coordinates" => [
-                            "latitude" => $originInfo['lat'] ?? 0,
-                            "longitude" => $originInfo['lng'] ?? 0
+                            "latitude" => 0,
+                            "longitude" => 0
                         ],
                         "country" => "PL"
                     ],
@@ -362,8 +363,8 @@ class TransEuQuoteService
                     "place" => [
                         "address" => ["locality" => $destCity, "postal_code" => $destZip],
                         "coordinates" => [
-                            "latitude" => $destInfo['lat'] ?? 0,
-                            "longitude" => $destInfo['lng'] ?? 0
+                            "latitude" => 0,
+                            "longitude" => 0
                         ],
                         "country" => "PL"
                     ],

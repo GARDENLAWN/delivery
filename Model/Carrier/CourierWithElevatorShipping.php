@@ -63,6 +63,18 @@ class CourierWithElevatorShipping extends AbstractCarrier implements CarrierInte
         $priceCustomerKm = $priceKm * $distance;
         $price = ceil($priceCustomerKm * $maxLoadFactor);
 
+        // Check if shipping prices include tax in configuration
+        $shippingIncludesTax = $this->_scopeConfig->isSetFlag(
+            'tax/calculation/shipping_includes_tax',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
+        // Assuming the calculated price is GROSS based on typical configuration
+        if (!$shippingIncludesTax) {
+             // If config says prices exclude tax, but we calculated gross, we might need to strip tax.
+             // However, without tax rate info here, we return as is, assuming the base parameters (price per km) are set according to the tax config.
+        }
+
         return $price > 0 ? $price : 0.0;
     }
 

@@ -219,12 +219,35 @@ class DistanceCalculator implements ArgumentInterface
 
         // Add formatted prices (Net & Gross)
         foreach ($costs as &$costItem) {
-            $priceNet = $costItem['price'];
-            $priceGross = $priceNet * (1 + $taxRate / 100);
+            $price = $costItem['price'];
+            $priceNet = $price;
+            $priceGross = $price;
 
-            // If price_details exists (from Trans.eu), use its gross value for accuracy
+            // Check if shipping prices include tax in configuration
+            $shippingIncludesTax = $this->scopeConfig->isSetFlag(
+                'tax/calculation/shipping_includes_tax',
+                \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+            );
+
+            if ($shippingIncludesTax) {
+                // Price is Gross
+                $priceGross = $price;
+                $priceNet = $price / (1 + $taxRate / 100);
+            } else {
+                // Price is Net
+                $priceNet = $price;
+                $priceGross = $price * (1 + $taxRate / 100);
+            }
+
+            // If price_details exists (from Trans.eu), use its gross value for accuracy if available
             if (!empty($costItem['price_details']['gross'])) {
                 $priceGross = $costItem['price_details']['gross'];
+                // Recalculate net from this specific gross if needed, or use provided net
+                if (!empty($costItem['price_details']['net'])) {
+                    $priceNet = $costItem['price_details']['net'];
+                } else {
+                    $priceNet = $priceGross / (1 + $taxRate / 100);
+                }
             }
 
             $costItem['formatted_price_net'] = $this->storeManager->getStore()->getCurrentCurrency()->format($priceNet, [], false);

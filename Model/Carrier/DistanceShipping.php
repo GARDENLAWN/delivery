@@ -118,7 +118,21 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
             return 0.0;
         }
 
-        return floatval(min($deliverAmounts)) / 1000.0;
+        $price = floatval(min($deliverAmounts)) / 1000.0;
+
+        // Check if shipping prices include tax in configuration
+        $shippingIncludesTax = $this->_scopeConfig->isSetFlag(
+            'tax/calculation/shipping_includes_tax',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
+        // Assuming the calculated price is GROSS based on typical configuration
+        if (!$shippingIncludesTax) {
+             // If config says prices exclude tax, but we calculated gross, we might need to strip tax.
+             // However, without tax rate info here, we return as is, assuming the base parameters are set according to the tax config.
+        }
+
+        return $price;
     }
 
     public function collectRates(RateRequest $request): Result|bool

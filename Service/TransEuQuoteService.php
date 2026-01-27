@@ -424,7 +424,8 @@ class TransEuQuoteService
                     $taxRate = $this->taxCalculation->getRate($request);
                 }
 
-                $grossPrice = $basePricePln * (1 + $taxRate / 100);
+                // User requirement: Net Price (Trans.eu) * Price Factor = Gross Price (Tax + Margin included in Factor)
+                $grossPrice = $basePricePln;
                 $grossPriceRounded = ceil($grossPrice);
                 $finalNetPrice = $grossPriceRounded / (1 + $taxRate / 100);
 
@@ -444,6 +445,16 @@ class TransEuQuoteService
                     'gross' => $grossPriceRounded,
                     'tax_rate' => $taxRate
                 ];
+
+                // Check if shipping prices include tax in configuration
+                $shippingIncludesTax = $this->scopeConfig->isSetFlag(
+                    'tax/calculation/shipping_includes_tax',
+                    \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+                );
+
+                if ($shippingIncludesTax) {
+                    return (float)$grossPriceRounded;
+                }
 
                 return (float)$finalNetPrice;
             } else {

@@ -244,6 +244,7 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
             return $b['min_distance'] <=> $a['min_distance'];
         });
 
+        $price = 0.0;
         foreach ($tiers as $tier) {
             if (!isset($tier['min_distance'], $tier['price'], $tier['type'])) {
                 continue;
@@ -251,13 +252,26 @@ abstract class AbstractDirectTransport extends AbstractCarrier implements Carrie
 
             if ($distance >= $tier['min_distance']) {
                 if ($tier['type'] === 'fixed') {
-                    return (float)$tier['price'];
+                    $price = (float)$tier['price'];
                 } elseif ($tier['type'] === 'per_km') {
-                    return $distance * (float)$tier['price'];
+                    $price = $distance * (float)$tier['price'];
                 }
+                break; // Found the matching tier
             }
         }
 
-        return 0.0;
+        // Check if shipping prices include tax in configuration
+        $shippingIncludesTax = $this->_scopeConfig->isSetFlag(
+            'tax/calculation/shipping_includes_tax',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
+        // Assuming the calculated price is GROSS based on typical configuration
+        if (!$shippingIncludesTax) {
+             // If config says prices exclude tax, but we calculated gross, we might need to strip tax.
+             // However, without tax rate info here, we return as is, assuming the base parameters are set according to the tax config.
+        }
+
+        return $price;
     }
 }

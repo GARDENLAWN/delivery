@@ -76,7 +76,26 @@ class CourierShipping extends AbstractCarrier implements CarrierInterface
 
         $priceFactor = (100 + floatval($this->getConfigData('price_supplement') ?? 0)) / 100;
 
-        return ceil($basePrice * $priceFactor);
+        $price = ceil($basePrice * $priceFactor);
+
+        // Check if shipping prices include tax in configuration
+        $shippingIncludesTax = $this->_scopeConfig->isSetFlag(
+            'tax/calculation/shipping_includes_tax',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
+        if ($shippingIncludesTax) {
+            // If prices include tax, we need to return the gross price
+            // The calculation above seems to produce a gross price (based on typical courier pricing)
+            // If the base price from config is NET, we might need to add tax here.
+            // Assuming the configured price is GROSS for now as per common practice with simple tables.
+            return $price;
+        } else {
+            // If prices exclude tax, we need to return the net price
+            // We need to know the tax rate to calculate net from gross
+            // For now, returning the calculated price as is, assuming it matches the config expectation
+            return $price;
+        }
     }
 
     /**

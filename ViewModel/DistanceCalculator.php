@@ -7,6 +7,7 @@ use GardenLawn\Delivery\Model\Carrier\CourierShipping;
 use GardenLawn\Delivery\Model\Carrier\DirectForklift;
 use GardenLawn\Delivery\Model\Carrier\DirectLift;
 use GardenLawn\Delivery\Model\Carrier\DirectNoLift;
+use GardenLawn\Delivery\Model\Carrier\DistanceShipping;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 use Magento\Framework\HTTP\Client\Curl;
 use Magento\Checkout\Model\Session as CheckoutSession;
@@ -30,6 +31,7 @@ class DistanceCalculator implements ArgumentInterface
     private DirectNoLift $directNoLift;
     private DirectLift $directLift;
     private DirectForklift $directForklift;
+    private DistanceShipping $distanceShipping;
     private CheckoutSession $checkoutSession;
     private CustomerSession $customerSession;
     private CustomerRepositoryInterface $customerRepository;
@@ -52,6 +54,7 @@ class DistanceCalculator implements ArgumentInterface
         DirectNoLift $directNoLift,
         DirectLift $directLift,
         DirectForklift $directForklift,
+        DistanceShipping $distanceShipping,
         CheckoutSession $checkoutSession,
         CustomerSession $customerSession,
         CustomerRepositoryInterface $customerRepository,
@@ -70,6 +73,7 @@ class DistanceCalculator implements ArgumentInterface
         $this->directNoLift = $directNoLift;
         $this->directLift = $directLift;
         $this->directForklift = $directForklift;
+        $this->distanceShipping = $distanceShipping;
         $this->checkoutSession = $checkoutSession;
         $this->customerSession = $customerSession;
         $this->customerRepository = $customerRepository;
@@ -158,6 +162,7 @@ class DistanceCalculator implements ArgumentInterface
             $taxRate = $this->taxCalculation->getRate($request);
         }
 
+        // 1. Courier Shipping
         if ($this->courierShipping->getConfigFlag('active')) {
             $price = $this->courierShipping->calculatePrice($qty);
             if ($price > 0) {
@@ -172,6 +177,44 @@ class DistanceCalculator implements ArgumentInterface
             }
         }
 
+        // 2. Distance Shipping (NEW)
+        if ($this->distanceShipping->getConfigFlag('active')) {
+            // Check max quantity for DistanceShipping
+            $maxQty = (float)$this->distanceShipping->getConfigData('max_quantity');
+            if ($maxQty <= 0) $maxQty = 950.0;
+
+            if ($qty <= $maxQty) {
+                // Calculate distance for DistanceShipping (it might have specific origin)
+                $methodOrigin = $this->distanceShipping->getConfigData('specific_origin');
+                $distanceKm = $defaultDistanceKm;
+
+                if ($methodOrigin && $methodOrigin !== $defaultOrigin) {
+                    $result = $this->getDistance($methodOrigin, $destination);
+                    if (isset($result['element']['distance']['value'])) {
+                        $distanceKm = $result['element']['distance']['value'] / 1000;
+                    } else {
+                        $distanceKm = 0; // Failed to calculate specific distance
+                    }
+                }
+
+                if ($distanceKm > 0) {
+                    $price = $this->distanceShipping->calculatePrice($distanceKm, $qty);
+                    if ($price > 0) {
+                        $costs[] = [
+                            'code' => 'distanceshipping_distanceshipping',
+                            'carrier_title' => __($this->distanceShipping->getConfigData('title')),
+                            'method' => __($this->distanceShipping->getConfigData('name')),
+                            'description' => __($this->distanceShipping->getConfigData('description')),
+                            'price' => $price,
+                            'distance' => $distanceKm,
+                            'source' => 'table'
+                        ];
+                    }
+                }
+            }
+        }
+
+        // 3. Direct Transport Methods
         $processDirectMethod = function ($method, $code) use ($qty, $destination, $defaultOrigin, $defaultDistanceKm) {
             if (!$method->getConfigFlag('active')) {
                 return null;

@@ -189,7 +189,45 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
             return false;
         }
 
-        $destination = $request->getDestStreet() . ', ' . $request->getDestPostcode() . ' ' . $request->getDestCity();
+        // Build destination address robustly
+        $destStreet = trim((string)$request->getDestStreet());
+        $destPostcode = trim((string)$request->getDestPostcode());
+        $destCity = trim((string)$request->getDestCity());
+        $destCountryId = $request->getDestCountryId() ?: 'PL';
+
+        // Ignore dummy values often used in simulations
+        if ($destStreet === '-' || $destStreet === '.') {
+            $destStreet = '';
+        }
+        if ($destCity === '-' || $destCity === '.') {
+            $destCity = '';
+        }
+
+        $addressParts = [];
+
+        if (!empty($destStreet)) {
+            $addressParts[] = $destStreet;
+        }
+
+        if (!empty($destPostcode)) {
+            $addressParts[] = $destPostcode;
+        }
+
+        if (!empty($destCity)) {
+            $addressParts[] = $destCity;
+        }
+
+        // Always append country for better geocoding accuracy
+        $addressParts[] = $destCountryId;
+
+        // If we only have Country, we can't calculate distance
+        if (count($addressParts) <= 1) {
+             // LOGGING FOR DEBUG
+             // $this->_logger->info('DistanceShipping: Not enough address parts: ' . implode(', ', $addressParts));
+             return false;
+        }
+
+        $destination = implode(', ', $addressParts);
 
         try {
             // Using DistanceService (which handles Here/Google logic)
@@ -200,7 +238,7 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
         }
 
         if ($distance <= 0) {
-            $this->_logger->warning('DistanceShipping: Distance is 0 or could not be calculated');
+            $this->_logger->warning('DistanceShipping: Distance is 0 or could not be calculated for destination: ' . $destination);
             return false;
         }
 

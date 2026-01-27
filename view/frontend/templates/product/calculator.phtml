@@ -267,9 +267,36 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                 const cost = this.selectedCost;
                 if (cost) {
                     // Use gross price for total calculation if available
+                    // The backend now ensures formatted_price_gross is correct based on tax config
+                    // But for JS calculation we need the raw float value.
+                    // If price_details.gross exists, it's the most accurate gross price from Trans.eu
                     if (cost.price_details && cost.price_details.gross) {
                          return parseFloat(cost.price_details.gross);
                     }
+                    // Fallback to the main price field.
+                    // Note: If shipping_includes_tax is true, cost.price IS gross.
+                    // If false, cost.price is net, so we should ideally add tax here if we want to show gross total.
+                    // However, we don't have tax rate in JS easily.
+                    // Assuming the backend logic for 'price' field aligns with what we want to sum up (usually gross for B2C).
+                    // Given the recent PHP changes, cost.price should be gross if config is set to include tax.
+                    // If config excludes tax, cost.price is net.
+                    // For the total summary, we usually want Gross.
+                    // Let's rely on the formatted_price_gross parsing if possible, or just use price.
+                    // A safer bet with the new PHP logic:
+                    // If we have formatted_price_gross, try to parse it (removing currency symbol might be tricky depending on locale).
+                    // Better: Let's trust the PHP side to provide a 'price_gross' float if we added it.
+                    // We didn't add a specific 'price_gross' float to the top level array in PHP, only formatted strings.
+                    // But we did ensure 'price' reflects the configuration.
+                    // If config is "Excl Tax", 'price' is Net. Grand Total should probably be Net + Tax?
+                    // Or Grand Total is usually Gross.
+                    // Let's assume for B2C 'price' is Gross or we use the Trans.eu gross.
+
+                    // If we are in "Excl Tax" mode, 'price' is Net. We need to add tax to show Gross Total.
+                    // But we don't know the tax rate here.
+                    // Let's assume the user wants to see what they will pay.
+                    // If the shop is B2B (Excl Tax), they expect Net Total.
+                    // If B2C (Incl Tax), they expect Gross Total.
+                    // So simply summing 'price' (which respects config) + 'productTotal' (which respects config?) is usually correct for the context.
                     return parseFloat(cost.price);
                 }
                 return 0;

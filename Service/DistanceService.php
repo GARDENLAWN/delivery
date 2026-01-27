@@ -5,27 +5,37 @@ namespace GardenLawn\Delivery\Service;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\HTTP\Client\Curl;
 use Psr\Log\LoggerInterface;
+use Magento\Framework\Serialize\Serializer\Json;
+use Magento\Framework\App\CacheInterface;
 
 class DistanceService
 {
     private const GOOGLE_MAPS_API_URL = 'https://maps.googleapis.com/maps/api/distancematrix/json';
     private const GOOGLE_GEOCODING_API_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
     private const HERE_API_URL = 'https://router.hereapi.com/v8/routes';
+    private const CACHE_TAG = 'GARDENLAWN_DISTANCE';
+    private const CACHE_LIFETIME = 86400; // 24 hours
 
     protected ScopeConfigInterface $scopeConfig;
     protected Curl $curl;
     protected LoggerInterface $logger;
+    protected Json $json;
+    protected CacheInterface $cache;
 
     protected static $coordinatesCache = [];
 
     public function __construct(
         ScopeConfigInterface $scopeConfig,
         Curl $curl,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        Json $json,
+        CacheInterface $cache
     ) {
         $this->scopeConfig = $scopeConfig;
         $this->curl = $curl;
         $this->logger = $logger;
+        $this->json = $json;
+        $this->cache = $cache;
     }
 
     /**
@@ -37,13 +47,26 @@ class DistanceService
      */
     public function getDistance(string $origin, string $destination): float
     {
+        $cacheKey = 'dist_' . md5($origin . '_' . $destination);
+        $cachedDistance = $this->cache->load($cacheKey);
+
+        if ($cachedDistance !== false) {
+            return (float)$cachedDistance;
+        }
+
         $provider = $this->scopeConfig->getValue('delivery/api_provider/provider');
 
         if ($provider === 'here') {
-            return $this->getDistanceFromHere($origin, $destination);
+            $distance = $this->getDistanceFromHere($origin, $destination);
+        } else {
+            $distance = $this->getDistanceFromGoogle($origin, $destination);
         }
 
-        return $this->getDistanceFromGoogle($origin, $destination);
+        if ($distance > 0) {
+            $this->cache->save((string)$distance, $cacheKey, [self::CACHE_TAG], self::CACHE_LIFETIME);
+        }
+
+        return $distance;
     }
 
     /**
@@ -54,9 +77,23 @@ class DistanceService
      */
     public function getCoordinates(string $address): ?array
     {
-        $cacheKey = md5($address);
+        $cacheKey = 'coord_' . md5($address);
+
+        // Check static cache first (for current request)
         if (isset(self::$coordinatesCache[$cacheKey])) {
             return self::$coordinatesCache[$cacheKey];
+        }
+
+        // Check persistent cache
+        $cachedData = $this->cache->load($cacheKey);
+        if ($cachedData !== false) {
+            try {
+                $result = $this->json->unserialize($cachedData);
+                self::$coordinatesCache[$cacheKey] = $result;
+                return $result;
+            } catch (\Exception $e) {
+                // Ignore unserialize error and fetch fresh
+            }
         }
 
         $provider = $this->scopeConfig->getValue('delivery/api_provider/provider');
@@ -70,6 +107,7 @@ class DistanceService
 
         if ($result) {
             self::$coordinatesCache[$cacheKey] = $result;
+            $this->cache->save($this->json->serialize($result), $cacheKey, [self::CACHE_TAG], self::CACHE_LIFETIME);
         }
 
         return $result;
@@ -99,7 +137,7 @@ class DistanceService
 
             $this->curl->get($url);
             $response = $this->curl->getBody();
-            $data = json_decode($response, true);
+            $data = $this->json->unserialize($response);
 
             if (!$data || !isset($data['rows'][0]['elements'][0]['status'])) {
                 $this->logger->error('DistanceService: Invalid Google Maps API response');
@@ -139,7 +177,7 @@ class DistanceService
 
             $this->curl->get($url);
             $response = $this->curl->getBody();
-            $data = json_decode($response, true);
+            $data = $this->json->unserialize($response);
 
             if (!$data || !isset($data['status']) || $data['status'] !== 'OK') {
                 return null;
@@ -231,7 +269,7 @@ class DistanceService
             $curl = new \Magento\Framework\HTTP\Client\Curl();
             $curl->get($url);
             $response = $curl->getBody();
-            $data = json_decode($response, true);
+            $data = $this->json->unserialize($response);
 
             if (!$data || !isset($data['routes'][0]['sections'][0]['summary']['length'])) {
                 $this->logger->error('DistanceService: Invalid HERE API response - ' . ($response ?? 'empty'));
@@ -263,7 +301,7 @@ class DistanceService
 
             $this->curl->get($url);
             $response = $this->curl->getBody();
-            $data = json_decode($response, true);
+            $data = $this->json->unserialize($response);
 
             if (isset($data['items'][0]['position'])) {
                 $item = $data['items'][0];
@@ -326,14 +364,6 @@ class DistanceService
         if ($axleCount) {
             $params['vehicle[axleCount]'] = (int)$axleCount;
         }
-
-        // Vehicle type
-        /*
-        $vehicleType = $this->scopeConfig->getValue('delivery/truck_settings/vehicle_type');
-        if ($vehicleType) {
-            $params['vehicle[type]'] = $vehicleType;
-        }
-        */
 
         // Hazardous goods
         $hazardousGoods = $this->scopeConfig->getValue('delivery/truck_settings/hazardous_goods');

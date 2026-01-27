@@ -163,9 +163,9 @@
                     <label>Target Product SKU</label>
                     <comment>SKU to calculate shipping for (default: GARDENLAWNS001)</comment>
                 </field>
-                <field id="points" translate="label" type="textarea" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Intermediate Points (JSON)</label>
-                    <comment><![CDATA[JSON format: {"points":["Address 1","Address 2"]}]]></comment>
+                <field id="specific_origin" translate="label" type="text" sortOrder="45" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Specific Origin Address</label>
+                    <comment>Leave empty to use default Warehouse Origin. Default: ul.Wrocławska 7, 55-020 Rzeplin, Polska</comment>
                 </field>
                 <field id="max_quantity" translate="label" type="text" sortOrder="85" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Max Quantity (m2)</label>

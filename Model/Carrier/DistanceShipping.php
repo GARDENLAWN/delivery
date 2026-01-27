@@ -49,39 +49,6 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
         return [$this->_code => $this->getConfigData('name')];
     }
 
-    public function getDistanceForConfig($address): float
-    {
-        $origin = $this->_scopeConfig->getValue('delivery/general/warehouse_origin');
-        if (!$origin) {
-            return 0.0;
-        }
-        return $this->distanceService->getDistance($origin, $address);
-    }
-
-    public function getDistanceForConfigWithPoints($address): float
-    {
-        $origin = $this->_scopeConfig->getValue('delivery/general/warehouse_origin');
-        if (!$origin) {
-            return 0.0;
-        }
-
-        $pointsJson = $this->getConfigData('points');
-        if (!$pointsJson) {
-            return $this->distanceService->getDistance($origin, $address);
-        }
-
-        $pointsData = json_decode($pointsJson);
-        if (!$pointsData || !isset($pointsData->points)) {
-            return $this->distanceService->getDistance($origin, $address);
-        }
-
-        $points = [$origin];
-        $points = array_merge($points, $pointsData->points);
-        $points[] = $address;
-
-        return $this->distanceService->getDistanceForPoints($points);
-    }
-
     public function calculatePrice(float $distance, float $qnt): float
     {
         // 1. Get Pricing Table from Config
@@ -98,7 +65,6 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
 
         // Fallback to default table if config is empty or invalid
         if (empty($pricingTable)) {
-            // Default table structure compatible with logic below
             $defaultTable = [
                 ['m2' => 50, 'price' => 16.73], ['m2' => 100, 'price' => 9.73],
                 ['m2' => 150, 'price' => 7.4],  ['m2' => 200, 'price' => 6.23],
@@ -111,11 +77,8 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
                 ['m2' => 850, 'price' => 3.55], ['m2' => 900, 'price' => 3.51],
                 ['m2' => 950, 'price' => 3.46]
             ];
-            // Convert to array format used by ArraySerialized (usually has unique IDs as keys)
-            // But here we just need a list of items with m2 and price
             $pricingTable = $defaultTable;
         } else {
-            // Ensure array is just values if it comes from ArraySerialized with IDs
             $pricingTable = array_values($pricingTable);
         }
 
@@ -124,27 +87,26 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
             return $a['m2'] <=> $b['m2'];
         });
 
-        // 3. Find matching tier
-        $pricePerM2 = 0.0;
+        // 3. Find matching tier (first tier where m2 >= qnt)
+        $selectedTier = null;
         foreach ($pricingTable as $tier) {
-            if ($qnt <= $tier['m2']) {
-                $pricePerM2 = (float)$tier['price'];
+            if ($tier['m2'] >= $qnt) {
+                $selectedTier = $tier;
                 break;
             }
         }
 
-        // If quantity is larger than the largest tier, use the price of the largest tier
-        if ($pricePerM2 == 0.0 && !empty($pricingTable)) {
-            $lastTier = end($pricingTable);
-            $pricePerM2 = (float)$lastTier['price'];
+        // If quantity is larger than the largest tier, use the largest tier
+        if (!$selectedTier && !empty($pricingTable)) {
+            $selectedTier = end($pricingTable);
         }
 
-        if ($pricePerM2 <= 0) {
+        if (!$selectedTier) {
             return 0.0;
         }
 
-        // 4. Calculate Base Cost
-        $baseCost = $qnt * $pricePerM2;
+        // 4. Calculate Base Cost: (m2 from tier) * (price from tier)
+        $baseCost = (float)$selectedTier['m2'] * (float)$selectedTier['price'];
 
         // 5. Calculate Distance Supplement
         $freeDistanceLimit = $this->getConfigData('free_distance_limit');
@@ -168,20 +130,8 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
 
         // 6. Apply Price Supplement %
         $priceFactor = (100 + floatval($this->getConfigData('price_supplement') ?? 0)) / 100;
-        
+
         $totalPrice = ($baseCost + $distanceSupplement) * $priceFactor;
-
-        // Check if shipping prices include tax in configuration
-        $shippingIncludesTax = $this->_scopeConfig->isSetFlag(
-            'tax/calculation/shipping_includes_tax',
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-        );
-
-        // Assuming the calculated price is GROSS based on typical configuration
-        if (!$shippingIncludesTax) {
-             // If config says prices exclude tax, but we calculated gross, we might need to strip tax.
-             // However, without tax rate info here, we return as is, assuming the base parameters are set according to the tax config.
-        }
 
         return $totalPrice;
     }
@@ -201,7 +151,6 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
 
         $qnt = 0;
         foreach ($items as $item) {
-            // Skip parent items for configurable products to avoid double counting
             if ($item->getProduct()->isVirtual() || $item->getParentItem()) {
                 continue;
             }
@@ -217,20 +166,34 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
 
         // 1. Validate Max Quantity
         $maxQty = (float)$this->getConfigData('max_quantity');
-        // Default to 950 if not set
         if ($maxQty <= 0) {
-            $maxQty = 950.0;
+            $maxQty = 950.0; // Default fallback
         }
 
         if ($qnt > $maxQty) {
             return false;
         }
 
-        // 2. Calculate Distance
+        // 2. Calculate Distance (from specific_origin or warehouse_origin to destination)
+
+        // Try to get specific origin for this method first
+        $origin = $this->getConfigData('specific_origin');
+
+        // Fallback to global warehouse origin if specific is not set
+        if (!$origin) {
+            $origin = $this->_scopeConfig->getValue('delivery/general/warehouse_origin');
+        }
+
+        if (!$origin) {
+            $this->_logger->warning('DistanceShipping: Origin address not configured');
+            return false;
+        }
+
         $destination = $request->getDestStreet() . ', ' . $request->getDestPostcode() . ' ' . $request->getDestCity();
-        
+
         try {
-            $distance = $this->getDistanceForConfigWithPoints($destination);
+            // Using DistanceService (which handles Here/Google logic)
+            $distance = $this->distanceService->getDistance($origin, $destination);
         } catch (\Exception $e) {
             $this->_logger->error('DistanceShipping: Could not calculate distance: ' . $e->getMessage());
             return false;
@@ -252,11 +215,11 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
         $method = $this->_rateMethodFactory->create();
 
         $method->setCarrier($this->_code);
-        
+
         // 4. Set Method Title with Distance
         $methodTitle = (string)__($this->getConfigData('name'));
         $methodTitle .= ' (' . __('Dystans: %1 km', round($distance, 1)) . ')';
-        
+
         $method->setCarrierTitle((string)__($this->getConfigData('title')));
         $method->setMethod($this->_code);
         $method->setMethodTitle($methodTitle);

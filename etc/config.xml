@@ -58,6 +58,8 @@
                 </points>
                 <price_supplement>0</price_supplement>
                 <base_km>1</base_km>
+                <free_distance_limit>80</free_distance_limit>
+                <distance_surcharge>5</distance_surcharge>
                 <sort_order>50</sort_order>
             </distanceshipping>
 

@@ -147,9 +147,19 @@ class DistanceShipping extends AbstractCarrier implements CarrierInterface
         $baseCost = $qnt * $pricePerM2;
 
         // 5. Calculate Distance Supplement
+        $freeDistanceLimit = (float)$this->getConfigData('free_distance_limit');
+        if ($freeDistanceLimit <= 0) {
+            $freeDistanceLimit = 80.0; // Default fallback
+        }
+
+        $distanceSurcharge = (float)$this->getConfigData('distance_surcharge');
+        if ($distanceSurcharge <= 0) {
+            $distanceSurcharge = 5.0; // Default fallback
+        }
+
         $distanceSupplement = 0.0;
-        if ($distance > 80) {
-            $distanceSupplement = ($distance - 80) * 5.0;
+        if ($distance > $freeDistanceLimit) {
+            $distanceSupplement = ($distance - $freeDistanceLimit) * $distanceSurcharge;
         }
 
         // 6. Apply Price Supplement %

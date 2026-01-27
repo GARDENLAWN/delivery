@@ -180,9 +180,13 @@
                 <field id="price_supplement" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Price Supplement (%)</label>
                 </field>
-                <field id="base_km" translate="label" type="text" sortOrder="110" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
-                    <label>Base KM</label>
-                    <comment>Base distance for price calculation</comment>
+                <field id="free_distance_limit" translate="label" type="text" sortOrder="110" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Free Distance Limit (km)</label>
+                    <comment>Distance included in base price (default: 80)</comment>
+                </field>
+                <field id="distance_surcharge" translate="label" type="text" sortOrder="120" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Surcharge per extra km</label>
+                    <comment>Price per km above limit (default: 5)</comment>
                 </field>
                 <field id="sort_order" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
                     <label>Sort Order</label>

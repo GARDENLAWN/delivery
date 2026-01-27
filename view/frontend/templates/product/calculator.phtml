@@ -1,6 +1,20 @@
 <?php
 /** @var \Magento\Framework\View\Element\Template $block */
 /** @var \GardenLawn\Delivery\ViewModel\DistanceCalculator $viewModel */
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\Cart\TotalsOutput;
+
+/** @var ViewModelRegistry $viewModels */
+$viewModels = $block->getData('view_model_registry');
+if (!$viewModels) {
+    // Fallback if registry is not passed directly
+    $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+    $viewModels = $objectManager->get(ViewModelRegistry::class);
+}
+
+/** @var TotalsOutput $totalsOutput */
+$totalsOutput = $viewModels->require(TotalsOutput::class);
+
 $viewModel = $block->getData('view_model');
 
 // Debug info
@@ -136,8 +150,34 @@ $prefilledPostcode = $viewModel->getCustomerPostcode();
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <span class="text-sm font-bold text-gray-900 whitespace-nowrap block" x-text="cost.formatted_price_gross || cost.formatted_price"></span>
-                                    <span class="text-xs text-gray-500 whitespace-nowrap block" x-show="cost.formatted_price_net" x-text="cost.formatted_price_net + ' <?= $block->escapeJs(__('netto')) ?>'"></span>
+                                    <?php if ($totalsOutput->displayCartShippingInclTax() || $totalsOutput->displayCartShippingBoth()): ?>
+                                        <div class="text-sm font-bold text-gray-900 whitespace-nowrap block">
+                                            <span
+                                                x-text="cost.formatted_price_gross || cost.formatted_price"
+                                                class="price-including-tax"
+                                                data-label="<?= $escaper->escapeHtmlAttr(__('Incl. Tax')) ?>"
+                                            ></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($totalsOutput->displayCartShippingExclTax() || $totalsOutput->displayCartShippingBoth()): ?>
+                                        <div
+                                            class="text-xs text-gray-500 whitespace-nowrap block"
+                                            :class="{'mt-1': (cost.formatted_price_net !== cost.formatted_price_gross)}"
+                                        >
+                                            <span
+                                                x-text="cost.formatted_price_net || cost.formatted_price"
+                                                <?= $totalsOutput->displayCartShippingBoth() ? 'x-show="cost.formatted_price_net !== cost.formatted_price_gross"' : '' ?>
+                                                class="price-excluding-tax"
+                                                data-label="<?= $escaper->escapehtmlAttr(__('Excl. Tax')) ?>"
+                                            ></span>
+                                            <span
+                                                x-show="<?= $totalsOutput->displayCartShippingBoth() ? 'cost.formatted_price_net !== cost.formatted_price_gross' : 'true' ?>"
+                                                class="text-xs text-gray-500"
+                                            >
+                                                <?= $block->escapeHtml(__('netto')) ?>
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </label>
                         </template>

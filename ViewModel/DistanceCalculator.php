@@ -163,6 +163,7 @@ class DistanceCalculator implements ArgumentInterface
             if ($price > 0) {
                 $costs[] = [
                     'code' => 'couriershipping_couriershipping',
+                    'carrier_title' => __($this->courierShipping->getConfigData('title')),
                     'method' => __($this->courierShipping->getConfigData('name')),
                     'description' => __($this->courierShipping->getConfigData('description')),
                     'price' => $price,
@@ -197,6 +198,7 @@ class DistanceCalculator implements ArgumentInterface
 
                 return [
                     'code' => $code . '_' . $code,
+                    'carrier_title' => __($method->getConfigData('title')),
                     'method' => __($method->getConfigData('name')),
                     'description' => __($method->getConfigData('description')),
                     'price' => $price,

@@ -3,9 +3,6 @@
     <type name="Magento\Quote\Model\Cart\ShippingMethodConverter">
         <plugin name="gardenlawn_delivery_shipping_method_converter" type="GardenLawn\Delivery\Plugin\Quote\ShippingMethodConverterPlugin" />
     </type>
-    <type name="Magento\Quote\Model\Quote\Address">
-        <plugin name="gardenlawn_delivery_filter_shipping_rates" type="GardenLawn\Delivery\Plugin\Quote\Address\FilterShippingRates" />
-    </type>
 
     <!-- API / Checkout Filtering -->
     <type name="Magento\Quote\Api\ShippingMethodManagementInterface">

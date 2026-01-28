@@ -262,6 +262,34 @@ class DistanceCalculator implements ArgumentInterface
         $cost = $processDirectMethod($this->directForklift, 'direct_forklift');
         if ($cost) $costs[] = $cost;
 
+        // --- LOGIC: Compare DistanceShipping vs DirectNoLift and keep only the cheaper one ---
+        $distanceShippingIndex = null;
+        $directNoLiftIndex = null;
+
+        foreach ($costs as $index => $costItem) {
+            if ($costItem['code'] === 'distanceshipping_distanceshipping') {
+                $distanceShippingIndex = $index;
+            } elseif ($costItem['code'] === 'direct_no_lift_direct_no_lift') {
+                $directNoLiftIndex = $index;
+            }
+        }
+
+        if ($distanceShippingIndex !== null && $directNoLiftIndex !== null) {
+            $priceDistance = $costs[$distanceShippingIndex]['price'];
+            $priceDirect = $costs[$directNoLiftIndex]['price'];
+
+            if ($priceDistance <= $priceDirect) {
+                // DistanceShipping is cheaper or equal -> Remove DirectNoLift
+                unset($costs[$directNoLiftIndex]);
+            } else {
+                // DirectNoLift is cheaper -> Remove DistanceShipping
+                unset($costs[$distanceShippingIndex]);
+            }
+            // Re-index array to avoid gaps
+            $costs = array_values($costs);
+        }
+        // -------------------------------------------------------------------------------------
+
         // Add formatted prices (Net & Gross)
         foreach ($costs as &$costItem) {
             $price = $costItem['price'];
